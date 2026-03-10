@@ -1,0 +1,8 @@
+{
+  "roles": {
+    "planner": "anthropic/claude-3.5-sonnet",
+    "executor": "openai/gpt-4o-mini",
+    "tester": "openai/gpt-4o-mini"
+  },
+  "provider": "openrouter"
+}

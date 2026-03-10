@@ -1,0 +1,193 @@
+{
+  "test_result": {
+    "ok": true,
+    "workspace_path": "D:\\Nexora_Agente\\workspace\\cofre_dados",
+    "returncode": 0,
+    "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0\nrootdir: /workspace\nplugins: anyio-4.12.1\ncollected 3 items\n\ntests/test_crypto_vault.py ..                                            [ 66%]\ntests/test_main.py .                                                     [100%]\n\n============================== 3 passed in 0.58s ===============================\n",
+    "stderr": "",
+    "mode": "docker",
+    "sandbox": {
+      "ok": true,
+      "returncode": 0,
+      "stdout": "============================= test session starts ==============================\nplatform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0\nrootdir: /workspace\nplugins: anyio-4.12.1\ncollected 3 items\n\ntests/test_crypto_vault.py ..                                            [ 66%]\ntests/test_main.py .                                                     [100%]\n\n============================== 3 passed in 0.58s ===============================\n",
+      "stderr": "",
+      "build_stdout": "",
+      "build_stderr": "#0 building with \"desktop-linux\" instance using docker driver\n\n#1 [internal] load build definition from Dockerfile.nexora\n#1 transferring dockerfile: 286B 0.0s done\n#1 DONE 0.1s\n\n#2 [internal] load metadata for docker.io/library/python:3.12-slim\n#2 DONE 0.1s\n\n#3 [internal] load .dockerignore\n#3 transferring context: 2B done\n#3 DONE 0.0s\n\n#4 [1/5] FROM docker.io/library/python:3.12-slim@sha256:ccc7089399c8bb65dd1fb3ed6d55efa538a3f5e7fca3f5988ac3b5b87e593bf0\n#4 resolve docker.io/library/python:3.12-slim@sha256:ccc7089399c8bb65dd1fb3ed6d55efa538a3f5e7fca3f5988ac3b5b87e593bf0 0.0s done\n#4 DONE 0.1s\n\n#5 [internal] load build context\n#5 transferring context: 3.70kB 0.0s done\n#5 DONE 0.0s\n\n#6 [2/5] WORKDIR /workspace\n#6 CACHED\n\n#7 [3/5] COPY . /workspace\n#7 DONE 0.0s\n\n#8 [4/5] RUN pip install --no-cache-dir -r requirements.txt\n#8 2.294 Collecting fastapi==0.115.0 (from -r requirements.txt (line 1))\n#8 2.411   Downloading fastapi-0.115.0-py3-none-any.whl.metadata (27 kB)\n#8 2.479 Collecting pytest==9.0.2 (from -r requirements.txt (line 2))\n#8 2.502   Downloading pytest-9.0.2-py3-none-any.whl.metadata (7.6 kB)\n#8 2.567 Collecting starlette<0.39.0,>=0.37.2 (from fastapi==0.115.0->-r requirements.txt (line 1))\n#8 2.594   Downloading starlette-0.38.6-py3-none-any.whl.metadata (6.0 kB)\n#8 2.853 Collecting pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4 (from fastapi==0.115.0->-r requirements.txt (line 1))\n#8 2.876   Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)\n#8 2.945 Collecting typing-extensions>=4.8.0 (from fastapi==0.115.0->-r requirements.txt (line 1))\n#8 2.967   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)\n#8 2.994 Collecting iniconfig>=1.0.1 (from pytest==9.0.2->-r requirements.txt (line 2))\n#8 3.016   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)\n#8 3.052 Collecting packaging>=22 (from pytest==9.0.2->-r requirements.txt (line 2))\n#8 3.107   Downloading packaging-26.0-py3-none-any.whl.metadata (3.3 kB)\n#8 3.143 Collecting pluggy<2,>=1.5 (from pytest==9.0.2->-r requirements.txt (line 2))\n#8 3.167   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)\n#8 3.212 Collecting pygments>=2.7.2 (from pytest==9.0.2->-r requirements.txt (line 2))\n#8 3.235   Downloading pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)\n#8 3.265 Collecting annotated-types>=0.6.0 (from pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4->fastapi==0.115.0->-r requirements.txt (line 1))\n#8 3.288   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)\n#8 4.395 Collecting pydantic-core==2.41.5 (from pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4->fastapi==0.115.0->-r requirements.txt (line 1))\n#8 4.417   Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)\n#8 4.459 Collecting typing-inspection>=0.4.2 (from pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4->fastapi==0.115.0->-r requirements.txt (line 1))\n#8 4.488   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)\n#8 4.532 Collecting anyio<5,>=3.4.0 (from starlette<0.39.0,>=0.37.2->fastapi==0.115.0->-r requirements.txt (line 1))\n#8 4.559   Downloading anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)\n#8 4.593 Collecting idna>=2.8 (from anyio<5,>=3.4.0->starlette<0.39.0,>=0.37.2->fastapi==0.115.0->-r requirements.txt (line 1))\n#8 4.614   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)\n#8 4.658 Downloading fastapi-0.115.0-py3-none-any.whl (94 kB)\n#8 4.690 Downloading pytest-9.0.2-py3-none-any.whl (374 kB)\n#8 4.782 Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)\n#8 4.807 Downloading packaging-26.0-py3-none-any.whl (74 kB)\n#8 4.835 Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)\n#8 4.858 Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)\n#8 4.956 Downloading pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)\n#8 5.282    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 6.7 MB/s eta 0:00:00\n#8 5.310 Downloading pygments-2.19.2-py3-none-any.whl (1.2 MB)\n#8 5.493    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 6.7 MB/s eta 0:00:00\n#8 5.518 Downloading starlette-0.38.6-py3-none-any.whl (71 kB)\n#8 5.548 Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)\n#8 5.584 Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)\n#8 5.608 Downloading anyio-4.12.1-py3-none-any.whl (113 kB)\n#8 5.643 Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)\n#8 5.672 Downloading idna-3.11-py3-none-any.whl (71 kB)\n#8 5.766 Installing collected packages: typing-extensions, pygments, pluggy, packaging, iniconfig, idna, annotated-types, typing-inspection, pytest, pydantic-core, anyio, starlette, pydantic, fastapi\n#8 8.302 Successfully installed annotated-types-0.7.0 anyio-4.12.1 fastapi-0.115.0 idna-3.11 iniconfig-2.3.0 packaging-26.0 pluggy-1.6.0 pydantic-2.12.5 pydantic-core-2.41.5 pygments-2.19.2 pytest-9.0.2 starlette-0.38.6 typing-extensions-4.15.0 typing-inspection-0.4.2\n#8 8.303 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n#8 8.645 \n#8 8.645 [notice] A new release of pip is available: 25.0.1 -> 26.0.1\n#8 8.645 [notice] To update, run: pip install --upgrade pip\n#8 DONE 9.0s\n\n#9 [5/5] RUN pip install --no-cache-dir pytest\n#9 2.116 Requirement already satisfied: pytest in /usr/local/lib/python3.12/site-packages (9.0.2)\n#9 2.120 Requirement already satisfied: iniconfig>=1.0.1 in /usr/local/lib/python3.12/site-packages (from pytest) (2.3.0)\n#9 2.121 Requirement already satisfied: packaging>=22 in /usr/local/lib/python3.12/site-packages (from pytest) (26.0)\n#9 2.122 Requirement already satisfied: pluggy<2,>=1.5 in /usr/local/lib/python3.12/site-packages (from pytest) (1.6.0)\n#9 2.124 Requirement already satisfied: pygments>=2.7.2 in /usr/local/lib/python3.12/site-packages (from pytest) (2.19.2)\n#9 2.151 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.\n#9 2.294 \n#9 2.294 [notice] A new release of pip is available: 25.0.1 -> 26.0.1\n#9 2.294 [notice] To update, run: pip install --upgrade pip\n#9 DONE 2.4s\n\n#10 exporting to image\n#10 exporting layers\n#10 exporting layers 1.6s done\n#10 exporting manifest sha256:aebde8b399f566e50e1859973e012e3418a756e091951fe5d82452b3b8bd0602 0.0s done\n#10 exporting config sha256:769d81e10bbd275079c728d2104f98d12bd3b219cef75b6b8468487c4f08e608 0.0s done\n#10 exporting attestation manifest sha256:0e14a9cb9f92e181f693b8985994e647b18c8cc5cc89c2a35dd900dcbe6b5685 0.0s done\n#10 exporting manifest list sha256:052d702a6e5a32dd77e7b1e5f069caa03eb3a0058cdece46002c0cff3296d78f\n#10 exporting manifest list sha256:052d702a6e5a32dd77e7b1e5f069caa03eb3a0058cdece46002c0cff3296d78f 0.0s done\n#10 naming to docker.io/library/nexora-temp-build:latest done\n#10 unpacking to docker.io/library/nexora-temp-build:latest\n#10 unpacking to docker.io/library/nexora-temp-build:latest 0.7s done\n#10 DONE 2.5s\n",
+      "stage": "completed",
+      "mode": "docker"
+    },
+    "error_report": {
+      "traceback": "",
+      "error_lines": []
+    }
+  },
+  "shadow_test": {
+    "ok": true,
+    "status": "passed",
+    "mode": "docker",
+    "attempt_count": 15,
+    "vulnerabilities_found": 0,
+    "vulnerability_count": 0,
+    "attempts": [
+      {
+        "attack_type": "sqli",
+        "payload": "' OR '1'='1",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "xss",
+        "payload": "<script>alert(1)</script>",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "path_traversal",
+        "payload": "../../../../etc/passwd",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "template_injection",
+        "payload": "{{7*7}}",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "header_injection",
+        "payload": "X-Forwarded-For: 127.0.0.1\\r\\nX-Admin: true",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=123456",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=qwerty",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=admin",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=letmein",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=senha123",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=welcome",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=000000",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=abc123",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=iloveyou",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      },
+      {
+        "attack_type": "bruteforce",
+        "payload": "password=changeme",
+        "result": "blocked",
+        "blocked": true,
+        "evidence": []
+      }
+    ],
+    "vulnerabilities": [],
+    "stdout": "NEXORA_SHADOW_REPORT={\"ok\": true, \"attempt_count\": 15, \"vulnerabilities_found\": 0, \"attempts\": [{\"attack_type\": \"sqli\", \"payload\": \"' OR '1'='1\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"xss\", \"payload\": \"<script>alert(1)</script>\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"path_traversal\", \"payload\": \"../../../../etc/passwd\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"template_injection\", \"payload\": \"{{7*7}}\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"header_injection\", \"payload\": \"X-Forwarded-For: 127.0.0.1\\\\r\\\\nX-Admin: true\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=123456\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=qwerty\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=admin\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=letmein\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=senha123\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=welcome\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=000000\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=abc123\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=iloveyou\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}, {\"attack_type\": \"bruteforce\", \"payload\": \"password=changeme\", \"result\": \"blocked\", \"blocked\": true, \"evidence\": []}], \"vulnerabilities\": []}\n",
+    "stderr": ""
+  },
+  "self_improvement": {
+    "health": {
+      "score": 100,
+      "metrics": {
+        "python_files": 5,
+        "code_files": 3,
+        "test_files": 2,
+        "coverage_ratio": 0.67,
+        "untested_files": [
+          ".nexora_shadow_attack.py"
+        ],
+        "complex_files_over_200_lines": [],
+        "creator_to_creature_import_leaks": []
+      }
+    },
+    "dependencies": {
+      "dependencies": {
+        ".nexora_shadow_attack": [],
+        "crypto_vault": [],
+        "main": [
+          "crypto_vault"
+        ],
+        "tests.test_crypto_vault": [
+          "crypto_vault"
+        ],
+        "tests.test_main": [
+          "main"
+        ]
+      },
+      "potential_cycles": []
+    },
+    "refactoring_suggestions": [
+      "Sugerido criar testes unitarios correspondentes em tests/ para: .nexora_shadow_attack.py.",
+      "Sugerido isolar a logica de DB em repositorio separado e padronizar interfaces de servico."
+    ]
+  },
+  "gene_promotion": {
+    "status": "promoted",
+    "gene_name": "crypto_vault_v1",
+    "gene_path": "D:\\Nexora_Agente\\code_genome\\crypto_vault_v1",
+    "symbol_count": 1,
+    "top_score": 90,
+    "category": "core"
+  },
+  "cleanup": {
+    "status": "success",
+    "workspace": "D:\\Nexora_Agente\\workspace",
+    "removed_items": 1,
+    "errors": [],
+    "workspace_purified": true
+  }
+}

@@ -1,0 +1,28 @@
+Crie um Nexora ERP SaaS conforme o documento CONTEXT_TRANSFER.md.
+
+Regras obrigatorias de geracao:
+1) Multi-tenant estrito:
+- Inclua tenant_id como campo obrigatorio em modelos, payloads e filtros.
+- Em toda query (SELECT/UPDATE/DELETE), aplique filtro explicito por tenant_id.
+- Reutilize obrigatoriamente o gene TenantMixin (multi_tenant).
+
+2) Arquitetura plug-and-play do Assembler:
+- Respeite estritamente a estrutura de pastas:
+  - backend/app/models/
+  - backend/app/api/
+  - backend/app/services/
+  - infra/docker/
+- Nao invente estruturas alternativas fora desse padrao.
+
+3) Documentacao viva para NexoraDocs:
+- Inclua comentarios tecnicos no codigo iniciados com "NEXORADOCS:".
+- Esses comentarios devem explicar responsabilidade do modulo, regras de negocio e contratos de API.
+
+Genes obrigatorios:
+- [auth] para login
+- [multi_tenant] para isolamento de dados
+- [database] para ordens de servico
+- [dashboard] para metricas financeiras
+
+Escopo de IA:
+- Gere apenas a logica unica de "Service Orders" e "Products".

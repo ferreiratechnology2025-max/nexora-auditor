@@ -1,0 +1,13 @@
+{
+  "id": "auth_fastapi",
+  "name": "Auth FastAPI JWT",
+  "version": "1.0.0",
+  "description": "Gene oficial de autenticação para FastAPI com JWT, hash seguro de senha e validação de credenciais.",
+  "tags": ["auth", "fastapi", "jwt"],
+  "dependencies": ["python-jose", "passlib[bcrypt]"],
+  "compatible_stacks": ["python", "fastapi"],
+  "entrypoints": {
+    "handler": "code/auth_handler.py",
+    "tests": "tests/test_login.py"
+  }
+}

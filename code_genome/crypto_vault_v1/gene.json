@@ -1,0 +1,21 @@
+{
+  "id": "crypto_vault_v1",
+  "name": "AutoGene crypto_vault_v1",
+  "version": "1.0.0",
+  "category": "core",
+  "complexity": "medium",
+  "tags": [
+    "core",
+    "autogene",
+    "extracted"
+  ],
+  "source_project": "D:\\Nexora_Agente\\workspace\\cofre_dados",
+  "symbols": [
+    {
+      "name": "_derive_keystream",
+      "type": "function",
+      "score": 90,
+      "origin": "crypto_vault.py"
+    }
+  ]
+}
