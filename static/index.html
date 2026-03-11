@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AUDITX — Autopsia Digital do Seu Código</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --red:#ff453a;--green:#30d158;--yellow:#ffd60a;
+    --bg:#080808;--surface:#111;--border:rgba(255,255,255,.08);
+    --text:rgba(255,255,255,.85);--muted:rgba(255,255,255,.4)
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;overflow-x:hidden}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:18px 40px;background:rgba(8,8,8,.85);
+      backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+  .logo{font-size:20px;font-weight:900;letter-spacing:-1px}
+  .logo span{color:var(--red)}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;
+        transition:color .2s}
+  nav a:hover{color:#fff}
+  .nav-links{display:flex;gap:32px;align-items:center}
+  .nav-cta{background:var(--red);color:#fff!important;padding:10px 20px;
+           border-radius:8px;font-weight:700!important}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+        justify-content:center;text-align:center;padding:120px 24px 80px;
+        position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse 60% 40% at 50% 20%,rgba(255,69,58,.12),transparent);
+    pointer-events:none}
+  .hero-tag{display:inline-flex;align-items:center;gap:8px;
+            background:rgba(255,69,58,.1);border:1px solid rgba(255,69,58,.3);
+            color:var(--red);font-size:12px;font-weight:700;
+            letter-spacing:2px;text-transform:uppercase;
+            padding:8px 16px;border-radius:100px;margin-bottom:32px}
+  .hero-tag::before{content:'';width:6px;height:6px;border-radius:50%;
+                    background:var(--red);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  h1{font-size:clamp(42px,7vw,88px);font-weight:900;line-height:1.0;
+     letter-spacing:-3px;margin-bottom:24px}
+  h1 .accent{color:var(--red)}
+  h1 .mono{font-family:monospace;font-size:clamp(32px,5vw,64px);
+           color:rgba(255,255,255,.5);display:block;letter-spacing:-1px}
+  .hero-sub{font-size:18px;color:var(--muted);max-width:580px;line-height:1.6;
+            margin-bottom:48px}
+  .hero-sub strong{color:var(--text)}
+  .hero-actions{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+  .btn-primary{background:var(--red);color:#fff;border:none;
+               padding:16px 36px;border-radius:10px;font-size:16px;
+               font-weight:700;cursor:pointer;transition:all .2s;
+               text-decoration:none;display:inline-block}
+  .btn-primary:hover{background:#ff2d20;transform:translateY(-1px);
+                     box-shadow:0 8px 32px rgba(255,69,58,.3)}
+  .btn-secondary{background:transparent;color:var(--text);
+                 border:1px solid var(--border);padding:16px 36px;
+                 border-radius:10px;font-size:16px;font-weight:600;
+                 cursor:pointer;transition:all .2s;text-decoration:none;
+                 display:inline-block}
+  .btn-secondary:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.04)}
+
+  /* STATS BAR */
+  .stats-bar{background:var(--surface);border-top:1px solid var(--border);
+             border-bottom:1px solid var(--border);padding:32px 40px;
+             display:flex;justify-content:center;gap:64px;flex-wrap:wrap}
+  .stat{text-align:center}
+  .stat-num{font-size:32px;font-weight:900;color:#fff}
+  .stat-num span{color:var(--red)}
+  .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;
+              letter-spacing:1px;margin-top:4px}
+
+  /* SECTION */
+  section{padding:96px 24px;max-width:1100px;margin:0 auto}
+  .section-tag{font-size:11px;font-weight:700;letter-spacing:3px;
+               text-transform:uppercase;color:var(--red);margin-bottom:16px}
+  h2{font-size:clamp(32px,4vw,52px);font-weight:900;letter-spacing:-2px;
+     margin-bottom:16px;line-height:1.1}
+  .section-sub{font-size:16px;color:var(--muted);max-width:500px;line-height:1.6}
+
+  /* HOW IT WORKS */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+         gap:24px;margin-top:56px}
+  .step{background:var(--surface);border:1px solid var(--border);
+        border-radius:16px;padding:32px;position:relative;
+        transition:border-color .3s}
+  .step:hover{border-color:rgba(255,69,58,.3)}
+  .step-num{font-size:48px;font-weight:900;color:rgba(255,255,255,.05);
+            position:absolute;top:16px;right:20px}
+  .step-icon{font-size:28px;margin-bottom:16px}
+  .step h3{font-size:16px;font-weight:700;margin-bottom:8px}
+  .step p{font-size:13px;color:var(--muted);line-height:1.6}
+
+  /* WHAT WE FIND */
+  .findings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+                 gap:16px;margin-top:48px}
+  .finding-card{background:var(--surface);border:1px solid var(--border);
+                border-radius:12px;padding:24px;display:flex;gap:16px;
+                align-items:flex-start;transition:all .3s}
+  .finding-card:hover{border-color:rgba(255,69,58,.25);
+                      background:rgba(255,255,255,.03)}
+  .finding-icon{width:40px;height:40px;border-radius:10px;
+                display:flex;align-items:center;justify-content:center;
+                font-size:18px;flex-shrink:0}
+  .finding-icon.red{background:rgba(255,69,58,.12)}
+  .finding-icon.yellow{background:rgba(255,214,10,.1)}
+  .finding-icon.blue{background:rgba(10,132,255,.1)}
+  .finding-icon.green{background:rgba(48,209,88,.1)}
+  .finding-card h4{font-size:14px;font-weight:700;margin-bottom:4px}
+  .finding-card p{font-size:12px;color:var(--muted);line-height:1.5}
+
+  /* PLANS */
+  #planos{background:var(--surface);border-top:1px solid var(--border);
+          border-bottom:1px solid var(--border);padding:96px 24px}
+  .plans-inner{max-width:900px;margin:0 auto}
+  .plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+              gap:24px;margin-top:56px}
+  .plan-card{background:#0d0d0d;border:1px solid var(--border);
+             border-radius:20px;padding:40px;position:relative;
+             transition:all .3s}
+  .plan-card.featured{border-color:rgba(255,69,58,.4);
+    background:linear-gradient(145deg,rgba(255,69,58,.06),#0d0d0d)}
+  .plan-card.featured::before{content:'MAIS POPULAR';position:absolute;
+    top:-12px;left:50%;transform:translateX(-50%);
+    background:var(--red);color:#fff;font-size:10px;font-weight:800;
+    letter-spacing:2px;padding:4px 14px;border-radius:100px}
+  .plan-price{font-size:48px;font-weight:900;letter-spacing:-2px;margin:16px 0 4px}
+  .plan-price sup{font-size:20px;vertical-align:super;font-weight:600}
+  .plan-name{font-size:18px;font-weight:700;margin-bottom:8px}
+  .plan-desc{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.5}
+  .plan-features{list-style:none;margin-bottom:32px}
+  .plan-features li{font-size:13px;color:var(--muted);padding:8px 0;
+                    border-bottom:1px solid var(--border);
+                    display:flex;align-items:center;gap:10px}
+  .plan-features li::before{content:'✓';color:var(--green);font-weight:700;
+                             flex-shrink:0}
+  .plan-features li:last-child{border-bottom:none}
+  .email-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
+               border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;
+               margin-bottom:12px;outline:none;transition:border-color .2s}
+  .email-input:focus{border-color:rgba(255,69,58,.5)}
+  .email-input::placeholder{color:var(--muted)}
+
+  /* DEMO */
+  .demo-area{background:#0d0d0d;border:1px solid var(--border);
+             border-radius:20px;padding:40px;margin-top:56px}
+  .demo-header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .demo-dots{display:flex;gap:6px}
+  .demo-dots span{width:12px;height:12px;border-radius:50%}
+  .demo-dots span:nth-child(1){background:#ff5f57}
+  .demo-dots span:nth-child(2){background:#febc2e}
+  .demo-dots span:nth-child(3){background:#28c840}
+  .demo-title{font-size:13px;color:var(--muted);font-family:monospace}
+  .terminal{font-family:monospace;font-size:13px;line-height:2}
+  .t-green{color:var(--green)}
+  .t-red{color:var(--red)}
+  .t-yellow{color:var(--yellow)}
+  .t-muted{color:var(--muted)}
+  .t-white{color:#fff}
+  .upload-section{margin-top:32px}
+  .upload-zone{border:2px dashed var(--border);border-radius:12px;
+               padding:40px;text-align:center;cursor:pointer;
+               transition:all .3s;position:relative}
+  .upload-zone:hover{border-color:rgba(255,69,58,.4);background:rgba(255,69,58,.03)}
+  .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .upload-icon{font-size:32px;margin-bottom:12px}
+  .upload-label{font-size:15px;font-weight:600;margin-bottom:6px}
+  .upload-sub{font-size:12px;color:var(--muted)}
+  .or-sep{text-align:center;color:var(--muted);font-size:12px;
+          margin:20px 0;position:relative}
+  .or-sep::before,.or-sep::after{content:'';position:absolute;
+    top:50%;width:calc(50% - 20px);height:1px;background:var(--border)}
+  .or-sep::before{left:0}
+  .or-sep::after{right:0}
+  .github-input-row{display:flex;gap:12px}
+  .github-input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);
+                border-radius:8px;padding:12px 16px;color:#fff;font-size:14px;
+                outline:none;transition:border-color .2s}
+  .github-input:focus{border-color:rgba(255,69,58,.4)}
+  .github-input::placeholder{color:var(--muted)}
+  .result-area{margin-top:24px;display:none}
+  .result-area.visible{display:block}
+  .score-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+  .score-box{background:rgba(255,255,255,.04);border:1px solid var(--border);
+             border-radius:12px;padding:20px;text-align:center}
+  .score-box .val{font-size:36px;font-weight:900}
+  .score-box .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;
+                  letter-spacing:1px;margin-top:4px}
+  .severity-bar{margin-bottom:16px}
+  .sev-label{display:flex;justify-content:space-between;
+             font-size:12px;margin-bottom:6px}
+  .sev-track{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+  .sev-fill{height:100%;border-radius:3px;transition:width 1s ease}
+  .loading{display:none;text-align:center;padding:32px}
+  .loading.visible{display:block}
+  .spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.1);
+           border-top-color:var(--red);border-radius:50%;
+           animation:spin .8s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1c1c1e;
+         border:1px solid var(--border);border-radius:12px;
+         padding:14px 20px;font-size:14px;font-weight:500;
+         z-index:200;opacity:0;transform:translateY(8px);
+         transition:all .3s;pointer-events:none;max-width:320px}
+  .toast.show{opacity:1;transform:translateY(0)}
+
+  /* FOOTER */
+  footer{background:var(--surface);border-top:1px solid var(--border);
+         padding:48px 40px;text-align:center}
+  .footer-logo{font-size:24px;font-weight:900;letter-spacing:-1px;margin-bottom:8px}
+  .footer-logo span{color:var(--red)}
+  footer p{font-size:13px;color:var(--muted);line-height:1.8}
+  footer a{color:var(--muted);text-decoration:none}
+  footer a:hover{color:#fff}
+
+  @media(max-width:640px){
+    nav{padding:16px 20px}
+    .nav-links{display:none}
+    .stats-bar{gap:32px}
+    .github-input-row{flex-direction:column}
+    .score-row{grid-template-columns:repeat(3,1fr);gap:8px}
+    .plans-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">AUDIT<span>X</span></div>
+  <div class="nav-links">
+    <a href="#como-funciona">Como Funciona</a>
+    <a href="#o-que-encontramos">O Que Auditamos</a>
+    <a href="#planos">Planos</a>
+    <a href="#demo" class="nav-cta">Testar Grátis</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">Autopsia Digital do Seu Código</div>
+  <h1>
+    Seu código tem<br/>
+    <span class="accent">vulnerabilidades</span><br/>
+    <span class="mono">que você não vê.</span>
+  </h1>
+  <p class="hero-sub">
+    AUDITX realiza uma <strong>análise cirúrgica completa</strong> do seu repositório —
+    detecta falhas de segurança, gargalos de performance e entrega o laudo
+    com correção automática aplicada.
+  </p>
+  <div class="hero-actions">
+    <a href="#demo" class="btn-primary">Auditar Meu Projeto Agora</a>
+    <a href="#planos" class="btn-secondary">Ver Planos</a>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-num">94<span>%</span></div>
+    <div class="stat-label">Dos projetos têm falhas críticas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">+<span>40</span></div>
+    <div class="stat-label">Tipos de vulnerabilidade detectados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num"><span>&lt;</span>60s</div>
+    <div class="stat-label">Tempo médio de auditoria</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">100<span>%</span></div>
+    <div class="stat-label">Automático — sem configuração</div>
+  </div>
+</div>
+
+<!-- COMO FUNCIONA -->
+<section id="como-funciona">
+  <div class="section-tag">Processo</div>
+  <h2>Autopsia em 3 etapas</h2>
+  <p class="section-sub">Do upload ao laudo assinado. Sem configuração, sem agente instalado.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon">📦</div>
+      <h3>Ingestão</h3>
+      <p>Envie seu ZIP ou cole a URL do GitHub. O AUDITX clona e mapeia toda a estrutura em segundos.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon">🔬</div>
+      <h3>Análise Cirúrgica</h3>
+      <p>Motor estático examina cada arquivo — SQL injection, XSS, secrets expostos, dependências vulneráveis e mais.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon">⚡</div>
+      <h3>Auto-Fix + Laudo</h3>
+      <p>Correções são aplicadas automaticamente. Você recebe o projeto corrigido + laudo PDF com score certificado.</p>
+    </div>
+  </div>
+</section>
+
+<!-- O QUE AUDITAMOS -->
+<section id="o-que-encontramos">
+  <div class="section-tag">Cobertura</div>
+  <h2>O que a autopsia revela</h2>
+  <p class="section-sub">Análise estática profunda em Python, JavaScript, TypeScript, PHP, Java e mais.</p>
+  <div class="findings-grid">
+    <div class="finding-card">
+      <div class="finding-icon red">💉</div>
+      <div>
+        <h4>SQL Injection</h4>
+        <p>Queries não parametrizadas que expõem seu banco de dados a ataques de extração.</p>
+      </div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-icon red">🔑</div>
+      <div>
+        <h4>Secrets Expostos</h4>
+        <p>API keys, tokens e senhas hardcoded em código-fonte ou arquivos de configuração.</p>
+      </div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-icon yellow">🌐</div>
+      <div>
+        <h4>XSS &amp; Injeção HTML</h4>
+        <p>Inputs não sanitizados que permitem execução de scripts maliciosos.</p>
+      </div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-icon yellow">📦</div>
+      <div>
+        <h4>Dependências Vulneráveis</h4>
+        <p>Pacotes desatualizados com CVEs conhecidos que colocam sua aplicação em risco.</p>
+      </div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-icon blue">⚡</div>
+      <div>
+        <h4>Gargalos de Performance</h4>
+        <p>N+1 queries, loops ineficientes e operações bloqueantes que degradam a UX.</p>
+      </div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-icon green">🏆</div>
+      <div>
+        <h4>Certificado de Qualidade</h4>
+        <p>Score 0–100 auditado, com QR Code verificável e timestamp para seus clientes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section id="demo" style="padding-bottom:48px">
+  <div class="section-tag">Diagnóstico Gratuito</div>
+  <h2>Audite agora — sem cadastro</h2>
+  <p class="section-sub">Diagnóstico completo gratuito. Pague só pelo laudo detalhado.</p>
+
+  <div class="demo-area">
+    <div class="demo-header">
+      <div class="demo-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="demo-title">auditx — motor de análise estática</div>
+    </div>
+
+    <div class="upload-section">
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('zipFile').click()">
+        <input type="file" id="zipFile" accept=".zip" style="display:none" onchange="handleZipUpload(event)"/>
+        <div class="upload-icon">📁</div>
+        <div class="upload-label">Arraste seu ZIP aqui</div>
+        <div class="upload-sub">ou clique para selecionar</div>
+      </div>
+
+      <div class="or-sep">ou</div>
+
+      <div class="github-input-row">
+        <input type="text" class="github-input" id="repoUrl"
+               placeholder="https://github.com/usuario/repositorio"/>
+        <button class="btn-primary" onclick="handleGithubAudit()" style="white-space:nowrap">
+          Auditar Repo
+        </button>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div style="color:var(--muted);font-size:14px" id="loadingMsg">Executando autopsia digital...</div>
+    </div>
+
+    <div class="result-area" id="resultArea">
+      <div class="score-row">
+        <div class="score-box">
+          <div class="val" id="scoreInitial" style="color:var(--muted)">--</div>
+          <div class="lbl">Score Inicial</div>
+        </div>
+        <div class="score-box">
+          <div class="val" id="scoreFinal" style="color:var(--green)">--</div>
+          <div class="lbl">Score Final</div>
+        </div>
+        <div class="score-box">
+          <div class="val" id="totalFindings" style="color:var(--red)">--</div>
+          <div class="lbl">Vulnerabilidades</div>
+        </div>
+      </div>
+
+      <div id="severityBars"></div>
+
+      <div class="terminal" id="terminalOutput"></div>
+
+      <div style="margin-top:24px;padding:20px;background:rgba(255,69,58,.06);
+                  border:1px solid rgba(255,69,58,.2);border-radius:12px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:8px">
+          Diagnóstico concluído — laudo completo disponível
+        </div>
+        <div style="font-size:13px;color:var(--muted)">
+          Para receber o laudo detalhado com correções aplicadas, escolha um plano abaixo.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLANOS -->
+<div id="planos">
+  <div class="plans-inner">
+    <div class="section-tag" style="text-align:center">Planos</div>
+    <h2 style="text-align:center">Escolha sua autopsia</h2>
+    <p class="section-sub" style="margin:0 auto 0;text-align:center">
+      Diagnóstico gratuito. Pague pelo laudo que precisa.
+    </p>
+    <div class="plans-grid">
+
+      <div class="plan-card">
+        <div class="plan-name">Laudo Completo</div>
+        <div class="plan-price"><sup>R$</sup>1.000</div>
+        <div class="plan-desc">Análise completa + laudo certificado entregue por email em até 2 horas.</div>
+        <ul class="plan-features">
+          <li>Laudo de Segurança (Blindagem)</li>
+          <li>Laudo de Performance (Eficiência)</li>
+          <li>Certificado de Qualidade com QR Code</li>
+          <li>Score 0–100 auditado</li>
+          <li>Entrega em até 2 horas por email</li>
+        </ul>
+        <input type="email" class="email-input" id="emailLaudo"
+               placeholder="seu@email.com"/>
+        <button class="btn-secondary" style="width:100%;justify-content:center"
+                onclick="handlePayment('laudo',event)">
+          Gerar Laudo — R$1.000
+        </button>
+      </div>
+
+      <div class="plan-card featured">
+        <div class="plan-name">Laudo + Correção Automática</div>
+        <div class="plan-price"><sup>R$</sup>5.000</div>
+        <div class="plan-desc">Laudo completo + Auto-Fix aplicado + projeto corrigido pronto para produção.</div>
+        <ul class="plan-features">
+          <li>Tudo do Laudo Completo</li>
+          <li>Auto-Fix aplicado automaticamente</li>
+          <li>ZIP com projeto 100% corrigido</li>
+          <li>Relatório de patches aplicados</li>
+          <li>Suporte prioritário 48h</li>
+        </ul>
+        <input type="email" class="email-input" id="emailCorrecao"
+               placeholder="seu@email.com"/>
+        <button class="btn-primary" style="width:100%;text-align:center"
+                onclick="handlePayment('correcao',event)">
+          Corrigir Meu Projeto — R$5.000
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">AUDIT<span>X</span></div>
+  <p>
+    Autopsia Digital do Seu Código<br/>
+    <a href="mailto:suporte@api-plataforma.com">suporte@api-plataforma.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://auditor.nexora360.cloud">auditor.nexora360.cloud</a>
+  </p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let auditData = null;
+
+function showToast(msg, duration=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setLoading(visible, msg='Executando autopsia digital...') {
+  document.getElementById('loading').classList.toggle('visible', visible);
+  document.getElementById('loadingMsg').textContent = msg;
+  document.getElementById('resultArea').classList.toggle('visible', !visible && auditData);
+}
+
+async function handleZipUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!file.name.endsWith('.zip')) { showToast('Apenas arquivos .zip'); return; }
+
+  setLoading(true, `Analisando ${file.name}...`);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res  = await fetch('/api/audit/zip', {method:'POST', body:formData});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Erro na análise');
+    auditData = data;
+    renderResult(data);
+  } catch(e) {
+    showToast('Erro: ' + e.message);
+    setLoading(false);
+  }
+}
+
+async function handleGithubAudit() {
+  const url = document.getElementById('repoUrl').value.trim();
+  if (!url) { showToast('Cole a URL do repositório'); return; }
+
+  setLoading(true, 'Clonando e analisando repositório...');
+
+  try {
+    const res  = await fetch('/api/audit/github', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({repo_url: url})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Erro na análise');
+    auditData = data;
+    renderResult(data);
+  } catch(e) {
+    showToast('Erro: ' + e.message);
+    setLoading(false);
+  }
+}
+
+function renderResult(data) {
+  const si = data.health_score_initial || 0;
+  const sf = data.health_score_final   || 0;
+
+  document.getElementById('scoreInitial').textContent = si;
+  document.getElementById('scoreFinal').textContent   = sf;
+  document.getElementById('totalFindings').textContent = data.total_findings || 0;
+
+  const colorScore = sf >= 80 ? 'var(--green)' : sf >= 50 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('scoreFinal').style.color = colorScore;
+
+  // Severity bars
+  const sev   = data.by_severity || {};
+  const order = [['CRITICAL','#ff453a'],['HIGH','#ff9f0a'],['MEDIUM','#ffd60a'],['LOW','#30d158']];
+  const total = Object.values(sev).reduce((a,b)=>a+b,0) || 1;
+  document.getElementById('severityBars').innerHTML = order.map(([k,c])=>`
+    <div class="severity-bar">
+      <div class="sev-label">
+        <span style="color:${c};font-size:12px;font-weight:600">${k}</span>
+        <span style="color:var(--muted);font-size:12px">${sev[k]||0}</span>
+      </div>
+      <div class="sev-track">
+        <div class="sev-fill" style="width:${((sev[k]||0)/total*100).toFixed(1)}%;background:${c}"></div>
+      </div>
+    </div>`).join('');
+
+  // Terminal
+  const langs = (data.languages_detected||[]).join(', ') || 'N/A';
+  document.getElementById('terminalOutput').innerHTML = `
+    <div><span class="t-green">✓</span> <span class="t-muted">arquivos escaneados:</span> <span class="t-white">${data.files_scanned||0}</span></div>
+    <div><span class="t-green">✓</span> <span class="t-muted">linguagens:</span> <span class="t-white">${langs}</span></div>
+    <div><span class="t-red">!</span> <span class="t-muted">vulnerabilidades:</span> <span class="t-white">${data.total_findings||0}</span></div>
+    <div><span class="t-green">✓</span> <span class="t-muted">correções aplicadas:</span> <span class="t-white">${(data.findings||[]).length}</span></div>
+    <div><span class="t-yellow">→</span> <span class="t-muted">score:</span> <span class="t-white">${si} → ${sf} <span style="color:var(--green)">(+${sf-si})</span></span></div>`;
+
+  setLoading(false);
+  document.getElementById('resultArea').classList.add('visible');
+  document.getElementById('planos').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function handlePayment(type, event) {
+  event.preventDefault();
+  if (!auditData) {
+    showToast('Execute o diagnóstico primeiro');
+    document.getElementById('demo').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+
+  const emailId = type === 'laudo' ? 'emailLaudo' : 'emailCorrecao';
+  const email   = document.getElementById(emailId).value.trim();
+  if (!email || !email.includes('@')) { showToast('Informe um email válido'); return; }
+
+  showToast('Gerando link de pagamento...');
+
+  try {
+    const res  = await fetch('/api/payment/create', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({audit_id: auditData.audit_id, plan: type, email})
+    });
+    const data = await res.json();
+    if (data.init_point) {
+      window.location.href = data.init_point;
+    } else {
+      showToast('Erro: ' + (data.detail || 'Tente novamente'));
+    }
+  } catch(e) {
+    showToast('Erro de conexão. Tente novamente.');
+  }
+}
+
+// Drag & Drop
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='rgba(255,69,58,.6)' });
+dz.addEventListener('dragleave', () => { dz.style.borderColor='' });
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const fakeEvt = {target:{files:[file]}};
+    handleZipUpload(fakeEvt);
+  }
+});
+</script>
+</body>
+</html>

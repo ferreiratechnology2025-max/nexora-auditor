@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pagamento Confirmado — AUDITX</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#080808;color:rgba(255,255,255,.85);
+       font-family:'Helvetica Neue',Arial,sans-serif;
+       min-height:100vh;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;padding:24px;
+       text-align:center}
+  .card{background:#111;border:1px solid rgba(255,255,255,.08);
+        border-radius:24px;padding:56px 48px;max-width:540px;width:100%}
+  .icon{font-size:64px;margin-bottom:24px;
+        animation:pop .5s cubic-bezier(.175,.885,.32,1.275)}
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  .badge{display:inline-block;background:rgba(48,209,88,.12);
+         border:1px solid rgba(48,209,88,.3);color:#30d158;
+         font-size:11px;font-weight:700;letter-spacing:2px;
+         text-transform:uppercase;padding:6px 14px;
+         border-radius:100px;margin-bottom:20px}
+  h1{font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:12px}
+  p{font-size:15px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:8px}
+  .order-id{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+            border-radius:8px;padding:12px 20px;margin:24px 0;
+            font-family:monospace;font-size:13px;color:rgba(255,255,255,.6)}
+  .order-id span{color:#fff;font-weight:600}
+  .btn{display:inline-block;background:rgba(255,255,255,.07);
+       color:rgba(255,255,255,.7);text-decoration:none;
+       padding:12px 28px;border-radius:10px;font-size:14px;
+       font-weight:600;margin-top:24px;transition:all .2s;border:none;cursor:pointer}
+  .btn:hover{background:rgba(255,255,255,.12);color:#fff}
+  .logo{font-size:16px;font-weight:900;letter-spacing:-1px;
+        position:fixed;top:20px;left:24px}
+  .logo span{color:#ff453a}
+  .timeline{text-align:left;margin:28px 0}
+  .tl-item{display:flex;gap:14px;align-items:flex-start;padding:12px 0;
+           border-bottom:1px solid rgba(255,255,255,.06)}
+  .tl-item:last-child{border-bottom:none}
+  .tl-dot{width:8px;height:8px;border-radius:50%;background:#30d158;
+          margin-top:5px;flex-shrink:0}
+  .tl-dot.pending{background:rgba(255,255,255,.2)}
+  .tl-text{font-size:13px;color:rgba(255,255,255,.6);line-height:1.5}
+  .tl-text strong{color:rgba(255,255,255,.85);display:block;margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="logo">AUDIT<span>X</span></div>
+<div class="card">
+  <div class="icon">✅</div>
+  <div class="badge">Pagamento Confirmado</div>
+  <h1>Obrigado pela confiança!</h1>
+  <p>Seu pagamento foi processado com sucesso.<br/>
+     A autopsia digital está sendo preparada.</p>
+
+  <div class="order-id" id="orderInfo">
+    Processando informações do pedido...
+  </div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-text">
+        <strong>Pagamento confirmado</strong>
+        Recebemos seu pagamento e já iniciamos a análise.
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot pending"></div>
+      <div class="tl-text">
+        <strong>Laudo em preparação</strong>
+        Auditoria completa + geração do laudo certificado.
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot pending"></div>
+      <div class="tl-text">
+        <strong>Entrega por email (até 2h)</strong>
+        Você receberá o laudo no email cadastrado.
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:13px">
+    Dúvidas? Fale com a gente:<br/>
+    <a href="mailto:suporte@api-plataforma.com"
+       style="color:#30d158;text-decoration:none">
+      suporte@api-plataforma.com
+    </a>
+  </p>
+
+  <a href="/" class="btn">← Voltar ao AUDITX</a>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const auditId = params.get('audit_id') || '';
+const plan    = params.get('plan') || '';
+const planLabel = plan === 'correcao' ? 'Laudo + Correção' : 'Laudo Completo';
+
+document.getElementById('orderInfo').innerHTML =
+  auditId
+    ? `Plano: <span>${planLabel}</span> &nbsp;·&nbsp; ID: <span>${auditId.substring(0,16)}...</span>`
+    : 'Pedido registrado com sucesso';
+</script>
+</body>
+</html>

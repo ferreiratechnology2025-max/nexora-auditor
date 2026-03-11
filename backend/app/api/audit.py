@@ -417,3 +417,161 @@ async def send_report(audit_id: str, body: SendReportRequest):
         return {"sent": True, "to": body.email, "report_type": body.report_type}
     except (ValueError, RuntimeError) as exc:
         return {"sent": False, "error": str(exc)}
+
+
+# =============================================================================
+# PAYMENT — Mercado Pago
+# =============================================================================
+import hashlib
+import hmac as _hmac
+import json as _json
+
+from fastapi import Request
+
+from app.payment_service import PaymentService
+
+
+class PaymentRequest(BaseModel):
+    audit_id: str
+    plan:     str
+    email:    EmailStr
+
+
+@router.post(
+    "/payment/create",
+    summary="Cria preferência de pagamento MP e retorna init_point",
+    status_code=status.HTTP_200_OK,
+)
+async def payment_create(body: PaymentRequest):
+    try:
+        svc  = PaymentService()
+        data = svc.create_preference(
+            plan=body.plan,
+            audit_id=body.audit_id,
+            email=body.email,
+        )
+        return data
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post(
+    "/webhook/mercadopago",
+    summary="Webhook MP: processa pagamento aprovado",
+    status_code=status.HTTP_200_OK,
+)
+async def webhook_mercadopago(request: Request):
+    import os
+
+    body_bytes = await request.body()
+    secret     = os.getenv("MP_WEBHOOK_SECRET", "")
+
+    # Verifica assinatura HMAC quando secret estiver configurado
+    if secret:
+        sig_header = request.headers.get("x-signature", "")
+        req_id     = request.headers.get("x-request-id", "")
+        ts = v1 = ""
+        for part in sig_header.split(","):
+            if part.startswith("ts="):
+                ts = part[3:]
+            elif part.startswith("v1="):
+                v1 = part[3:]
+        try:
+            data_id = _json.loads(body_bytes).get("data", {}).get("id", "")
+        except Exception:
+            data_id = ""
+        template = f"id:{data_id};request-id:{req_id};ts:{ts};"
+        expected = _hmac.new(secret.encode(), template.encode(), hashlib.sha256).hexdigest()
+        if not _hmac.compare_digest(expected, v1):
+            raise HTTPException(status_code=401, detail="Assinatura inválida")
+
+    try:
+        payload = _json.loads(body_bytes)
+    except Exception:
+        return {"ok": True}
+
+    if payload.get("type") != "payment":
+        return {"ok": True}
+
+    payment_id = str(payload.get("data", {}).get("id", ""))
+    if not payment_id:
+        return {"ok": True}
+
+    try:
+        svc     = PaymentService()
+        payment = svc.get_payment(payment_id)
+    except Exception:
+        return {"ok": True}
+
+    if payment.get("status") != "approved":
+        return {"ok": True}
+
+    ext_ref = payment.get("external_reference", "")
+    parts   = ext_ref.split("|")
+    if len(parts) < 3:
+        return {"ok": True}
+
+    audit_id_ref, plan_ref, email_ref = parts[0], parts[1], parts[2]
+    valor = payment.get("transaction_amount", 0)
+    plan_label = "Laudo + Correção" if plan_ref == "correcao" else "Laudo Completo"
+
+    # Notifica suporte
+    try:
+        _email_svc = EmailService()
+        _email_svc.send_report(
+            to_email="suporte@api-plataforma.com",
+            audit_id=audit_id_ref,
+            score_initial=0,
+            score_final=0,
+            report_type="security",
+            html_report=(
+                f"<h2>💰 NOVO PAGAMENTO</h2>"
+                f"<p>Plano: {plan_label}<br/>"
+                f"Cliente: {email_ref}<br/>"
+                f"Valor: R${valor}<br/>"
+                f"Audit ID: {audit_id_ref}<br/>"
+                f"Payment ID: {payment_id}<br/>"
+                f"Laudo enviado automaticamente.</p>"
+            ),
+            project_name=f"💰 NOVO PAGAMENTO — {plan_label}",
+            findings_summary=(
+                f"• Plano: {plan_label}<br/>"
+                f"• Cliente: {email_ref}<br/>"
+                f"• Valor: R${valor}<br/>"
+                f"• Audit ID: {audit_id_ref}<br/>"
+                f"• Laudo enviado automaticamente."
+            ),
+        )
+    except Exception:
+        pass
+
+    # Envia laudo ao cliente se auditoria existir em memória
+    record = _store.get(audit_id_ref)
+    if record:
+        try:
+            html_report = _reports.security(record)
+            n_crit  = record.get("by_severity", {}).get("CRITICAL", 0)
+            n_high  = record.get("by_severity", {}).get("HIGH", 0)
+            n_fixed = len(record.get("fixed", []))
+            bullets = (
+                f"• {record.get('total_findings', 0)} vulnerabilidade(s) "
+                f"({n_crit} crítica(s), {n_high} alta(s)).<br/>"
+                f"• {n_fixed} correção(oes) aplicada(s).<br/>"
+                f"• Score: {record.get('health_score_initial',0)} → "
+                f"{record.get('health_score_final',0)}"
+            )
+            _email_svc = EmailService()
+            _email_svc.send_report(
+                to_email=email_ref,
+                audit_id=audit_id_ref,
+                score_initial=record.get("health_score_initial", 0),
+                score_final=record.get("health_score_final", 0),
+                report_type="security",
+                html_report=html_report,
+                project_name=record.get("project", "Projeto"),
+                findings_summary=bullets,
+            )
+        except Exception:
+            pass
+
+    return {"ok": True}

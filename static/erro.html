@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pagamento não processado — AUDITX</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#080808;color:rgba(255,255,255,.85);
+       font-family:'Helvetica Neue',Arial,sans-serif;
+       min-height:100vh;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;padding:24px;text-align:center}
+  .card{background:#111;border:1px solid rgba(255,255,255,.08);
+        border-radius:24px;padding:56px 48px;max-width:540px;width:100%}
+  .icon{font-size:64px;margin-bottom:24px;
+        animation:pop .5s cubic-bezier(.175,.885,.32,1.275)}
+  @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+  .badge{display:inline-block;background:rgba(255,69,58,.1);
+         border:1px solid rgba(255,69,58,.3);color:#ff453a;
+         font-size:11px;font-weight:700;letter-spacing:2px;
+         text-transform:uppercase;padding:6px 14px;
+         border-radius:100px;margin-bottom:20px}
+  h1{font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:12px}
+  p{font-size:15px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:8px}
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+  .btn-primary{background:#ff453a;color:#fff;text-decoration:none;
+               padding:14px 28px;border-radius:10px;font-size:14px;
+               font-weight:700;transition:all .2s;border:none;cursor:pointer}
+  .btn-primary:hover{background:#ff2d20}
+  .btn{display:inline-block;background:rgba(255,255,255,.07);
+       color:rgba(255,255,255,.7);text-decoration:none;
+       padding:14px 28px;border-radius:10px;font-size:14px;font-weight:600}
+  .btn:hover{background:rgba(255,255,255,.12);color:#fff}
+  .logo{font-size:16px;font-weight:900;letter-spacing:-1px;
+        position:fixed;top:20px;left:24px}
+  .logo span{color:#ff453a}
+  .tips{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+        border-radius:12px;padding:20px;text-align:left;margin:24px 0}
+  .tips h3{font-size:13px;font-weight:700;margin-bottom:12px;
+           color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px}
+  .tip{font-size:13px;color:rgba(255,255,255,.5);padding:6px 0;
+       display:flex;gap:10px;align-items:flex-start}
+  .tip::before{content:'•';color:#ff453a;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="logo">AUDIT<span>X</span></div>
+<div class="card">
+  <div class="icon">❌</div>
+  <div class="badge">Pagamento não processado</div>
+  <h1>Ops! Algo deu errado.</h1>
+  <p>Não conseguimos processar seu pagamento.<br/>
+     Seu diagnóstico ainda está salvo — tente novamente.</p>
+
+  <div class="tips">
+    <h3>Possíveis causas</h3>
+    <div class="tip">Cartão recusado pelo banco emissor</div>
+    <div class="tip">Limite insuficiente ou transação bloqueada</div>
+    <div class="tip">Dados do cartão digitados incorretamente</div>
+    <div class="tip">Conexão interrompida durante o pagamento</div>
+  </div>
+
+  <p style="font-size:13px">
+    Precisa de ajuda? Entre em contato:<br/>
+    <a href="mailto:suporte@api-plataforma.com"
+       style="color:#ff453a;text-decoration:none">
+      suporte@api-plataforma.com
+    </a>
+  </p>
+
+  <div class="actions">
+    <a href="/#planos" class="btn-primary">Tentar Novamente</a>
+    <a href="/" class="btn">Voltar ao Início</a>
+  </div>
+</div>
+</body>
+</html>
