@@ -1,0 +1,24 @@
+# Segredos — NUNCA commitar
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Banco / storage
+*.db
+*.sqlite
+
+# Relatórios de amostra (gerados localmente)
+sample_reports/
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# Diretórios temporários de auditoria
+auditx_zip_*/
+auditx_git_*/
