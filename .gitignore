@@ -22,3 +22,8 @@ env/
 # Diretórios temporários de auditoria
 auditx_zip_*/
 auditx_git_*/
+
+# Artefatos internos Nexora — não publicar
+.nexora_shadow_attack.py
+Dockerfile.shadow
+Dockerfile.nexora
