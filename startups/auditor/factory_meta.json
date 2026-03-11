@@ -1,0 +1,11 @@
+{
+  "slug": "auditor",
+  "brand_name": "AUDITX",
+  "generated_by": "Nexora Factory Manager v1.0",
+  "accent_primary": "#ff453a",
+  "api_endpoint": "/api/waitlist",
+  "port": 5008,
+  "domain": "auditor.nexora360.cloud",
+  "target": "Startups SaaS, fintechs, agências e empresas com compliance",
+  "status": "awaiting_activation"
+}

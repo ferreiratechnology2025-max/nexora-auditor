@@ -1,0 +1,22 @@
+# Segredos — NUNCA commitar
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Banco local
+memory/sqlite/*.db
+
+# Workspace gerado
+workspace/
+
+# Distribuição / build
+dist/
+dist_vps/
+*.zip
+*.egg-info/
