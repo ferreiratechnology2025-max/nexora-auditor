@@ -6,10 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git gcc build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    psycopg2-binary celery[redis] redis
+    psycopg2-binary "celery[redis]" redis
 
-COPY . .
+COPY backend/app ./app
+COPY backend/workers ./workers
 
 CMD ["celery", "-A", "workers.tasks", "worker", "--loglevel=info", "--concurrency=2"]

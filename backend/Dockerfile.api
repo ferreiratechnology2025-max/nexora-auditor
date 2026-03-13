@@ -6,13 +6,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git gcc build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
-    psycopg2-binary celery[redis] redis \
-    python-jose[cryptography] passlib[bcrypt] \
+    psycopg2-binary "celery[redis]" redis \
+    "python-jose[cryptography]" "passlib[bcrypt]" \
     email-validator mercadopago
 
-COPY . .
+COPY backend/app ./app
+COPY backend/workers ./workers
+COPY static ./static
 
 RUN python -c "from app.database import init_db; init_db()" 2>/dev/null || true
 
