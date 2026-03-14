@@ -1,26 +1,3 @@
-"""
-audit.py — Router FastAPI para o motor de auditoria AUDITX
-============================================================
-Fluxo completo: ingestão → análise estática → auto-correção → laudo → download
-
-Endpoints:
-  POST /api/audit/zip                      — upload de ZIP
-  POST /api/audit/github                   — clone de repositório GitHub
-  GET  /api/audit/{id}                     — resultado completo
-  GET  /api/audit/{id}/report              — laudo JSON (score inicial vs final)
-  GET  /api/audit/{id}/report/security     — HTML: Laudo de Segurança
-  GET  /api/audit/{id}/report/performance  — HTML: Laudo de Performance
-  GET  /api/audit/{id}/report/certificate  — HTML: Certificado de Qualidade
-  GET  /api/audit/{id}/download            — ZIP com projeto corrigido
-  POST /api/audit/{id}/send-report         — envia laudo por email
-
-Ciclo de vida do diretório temporário:
-  • Criado em ingestão (mkdtemp)
-  • Mantido vivo após sucesso (project_path guardado em _store)
-  • Deletado por BackgroundTask após streaming do /download
-  • Deletado imediatamente em caso de erro (bloco except)
-"""
-
 import io
 import re
 import shutil
@@ -32,9 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, EmailStr
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.audit_engine import AuditEngine
 from app.autofix_engine import AutoFixEngine
@@ -43,7 +22,8 @@ from app.email_service import EmailService
 
 router = APIRouter()
 
-# Storage em memória — substituível por SQLAlchemy quando DB estiver configurado
+limiter = Limiter(key_func=get_remote_address)
+
 _store: dict[str, dict[str, Any]] = {}
 
 _audit_engine = AuditEngine()
@@ -54,10 +34,10 @@ _REPO_URL_RE = re.compile(
     r'^https?://(github\.com|gitlab\.com|bitbucket\.org)/[\w.\-]+/[\w.\-]+(\.git)?/?$'
 )
 
+_IP_UPLOAD_SIZE_TRACKER: dict[str, dict[str, Any]] = {}
+_MAX_UPLOAD_SIZE_PER_IP_PER_HOUR = 500 * 1024 * 1024  # 500MB por IP por hora
+_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB por arquivo
 
-# =============================================================================
-# SCHEMAS
-# =============================================================================
 
 class GithubRequest(BaseModel):
     repo_url: str
@@ -65,12 +45,8 @@ class GithubRequest(BaseModel):
 
 class SendReportRequest(BaseModel):
     email:       str
-    report_type: str = "security"   # security | performance | certificate
+    report_type: str = "security"
 
-
-# =============================================================================
-# HELPERS
-# =============================================================================
 
 def _new_audit_id() -> str:
     return str(uuid.uuid4())
@@ -80,8 +56,34 @@ def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _get_ip_upload_total(ip: str) -> int:
+    now = datetime.now(timezone.utc)
+    if ip not in _IP_UPLOAD_SIZE_TRACKER:
+        return 0
+    tracker = _IP_UPLOAD_SIZE_TRACKER[ip]
+    window_start = tracker.get("window_start")
+    if window_start is None:
+        return 0
+    elapsed = (now - window_start).total_seconds()
+    if elapsed > 3600:
+        _IP_UPLOAD_SIZE_TRACKER[ip] = {"total": 0, "window_start": now}
+        return 0
+    return tracker.get("total", 0)
+
+
+def _record_ip_upload_size(ip: str, size: int) -> None:
+    now = datetime.now(timezone.utc)
+    if ip not in _IP_UPLOAD_SIZE_TRACKER:
+        _IP_UPLOAD_SIZE_TRACKER[ip] = {"total": 0, "window_start": now}
+    tracker = _IP_UPLOAD_SIZE_TRACKER[ip]
+    window_start = tracker.get("window_start")
+    if window_start is None or (now - window_start).total_seconds() > 3600:
+        _IP_UPLOAD_SIZE_TRACKER[ip] = {"total": size, "window_start": now}
+    else:
+        _IP_UPLOAD_SIZE_TRACKER[ip]["total"] = tracker.get("total", 0) + size
+
+
 def _run_full_pipeline(project_path: str, source_name: str) -> dict[str, Any]:
-    """Executa audit + autofix e salva resultado em _store. Não apaga project_path."""
     audit_result = _audit_engine.audit(project_path)
     fix_result   = _fix_engine.fix(project_path, audit_result["findings"])
 
@@ -91,21 +93,16 @@ def _run_full_pipeline(project_path: str, source_name: str) -> dict[str, Any]:
         "project":              source_name,
         "date":                 _utcnow(),
         "status":               "completed",
-        # scores
         "health_score_initial": audit_result["health_score_initial"],
         "health_score_final":   fix_result["health_score_final"],
-        # findings originais
         "findings":             audit_result["findings"],
         "total_findings":       audit_result["total"],
         "by_severity":          audit_result["by_severity"],
-        # correções
         "fixed":                fix_result["fixed"],
         "skipped":              fix_result["skipped"],
         "patch_summary":        fix_result["patch_summary"],
-        # metadados
         "languages_detected":   audit_result["languages_detected"],
         "files_scanned":        audit_result["files_scanned"],
-        # path mantido para /download — apagado após streaming
         "project_path":         project_path,
     }
     _store[audit_id] = record
@@ -123,7 +120,6 @@ def _get_or_404(audit_id: str) -> dict[str, Any]:
 
 
 def _zip_directory(root: Path) -> io.BytesIO:
-    """Compacta root recursivamente em um BytesIO ZIP."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for file_path in sorted(root.rglob("*")):
@@ -133,31 +129,67 @@ def _zip_directory(root: Path) -> io.BytesIO:
     return buf
 
 
-# =============================================================================
-# ENDPOINTS — INGESTÃO
-# =============================================================================
+def _validate_zip_contents(zip_path: Path) -> None:
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for member in zf.infolist():
+            member_path = Path(member.filename)
+            parts = member_path.parts
+            for part in parts:
+                if part == "..":
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="ZIP contém caminhos inválidos (path traversal detectado).",
+                    )
+            if member.file_size > _MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Arquivo '{member.filename}' excede o tamanho máximo permitido de 50MB.",
+                )
+
 
 @router.post(
     "/audit/zip",
     summary="Audita e corrige um projeto enviado como arquivo ZIP",
     status_code=status.HTTP_200_OK,
 )
-async def audit_zip(file: UploadFile = File(...)):
+@limiter.limit("10/hour")
+async def audit_zip(request: Request, file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".zip"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Apenas arquivos .zip são aceitos.",
         )
 
+    client_ip = get_remote_address(request)
+
+    file_bytes = await file.read()
+    file_size = len(file_bytes)
+
+    if file_size > _MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Arquivo excede o tamanho máximo permitido de 50MB.",
+        )
+
+    current_ip_total = _get_ip_upload_total(client_ip)
+    if current_ip_total + file_size > _MAX_UPLOAD_SIZE_PER_IP_PER_HOUR:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Limite de upload por hora excedido para este IP. Tente novamente mais tarde.",
+        )
+
     tmp_dir = tempfile.mkdtemp(prefix="auditx_zip_")
     try:
         zip_path = Path(tmp_dir) / "upload.zip"
-        zip_path.write_bytes(await file.read())
+        zip_path.write_bytes(file_bytes)
 
         try:
+            _validate_zip_contents(zip_path)
             with zipfile.ZipFile(zip_path, "r") as zf:
                 zf.extractall(tmp_dir)
             zip_path.unlink()
+        except HTTPException:
+            raise
         except zipfile.BadZipFile:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -167,15 +199,18 @@ async def audit_zip(file: UploadFile = File(...)):
             msg = str(exc).lower()
             if "password" in msg or "encrypted" in msg:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Este arquivo ZIP está protegido por senha. Envie um ZIP sem proteção.",
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="ZIPs protegidos por senha não são suportados.",
                 )
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Erro ao extrair ZIP: {exc}",
             )
 
+        _record_ip_upload_size(client_ip, file_size)
+
         record = _run_full_pipeline(tmp_dir, file.filename)
+        return record
 
     except HTTPException:
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -184,161 +219,138 @@ async def audit_zip(file: UploadFile = File(...)):
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro interno durante a auditoria: {exc}",
-        ) from exc
-    # Sem finally — tmp_dir é mantido vivo para /download
-
-    return {
-        "audit_id":             record["audit_id"],
-        "status":               record["status"],
-        "health_score_initial": record["health_score_initial"],
-        "health_score_final":   record["health_score_final"],
-        "total_findings":       record["total_findings"],
-        "by_severity":          record["by_severity"],
-        "fixed_count":          len(record["fixed"]),
-        "skipped_count":        len(record["skipped"]),
-        "languages_detected":   record["languages_detected"],
-        "files_scanned":        record["files_scanned"],
-        "findings":             record["findings"],
-    }
+            detail=f"Erro interno durante auditoria: {exc}",
+        )
 
 
 @router.post(
     "/audit/github",
-    summary="Audita e corrige um repositório GitHub",
+    summary="Audita e corrige um repositório GitHub/GitLab/Bitbucket",
     status_code=status.HTTP_200_OK,
 )
-async def audit_github(body: GithubRequest):
+@limiter.limit("10/hour")
+async def audit_github(request: Request, body: GithubRequest):
     if not _REPO_URL_RE.match(body.repo_url):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="repo_url deve ser uma URL válida de GitHub, GitLab ou Bitbucket.",
+            detail="URL de repositório inválida. Apenas GitHub, GitLab e Bitbucket são suportados.",
         )
 
     tmp_dir = tempfile.mkdtemp(prefix="auditx_git_")
     try:
-        clone = subprocess.run(
+        result = subprocess.run(
             ["git", "clone", "--depth", "1", body.repo_url, tmp_dir],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
-        if clone.returncode != 0:
+        if result.returncode != 0:
             raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Falha ao clonar repositório: {clone.stderr[:300]}",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Falha ao clonar repositório: {result.stderr.strip()}",
             )
 
-        project_name = body.repo_url.rstrip("/").split("/")[-1].removesuffix(".git")
-        record = _run_full_pipeline(tmp_dir, project_name)
+        record = _run_full_pipeline(tmp_dir, body.repo_url)
+        return record
 
-    except subprocess.TimeoutExpired:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Timeout ao clonar o repositório (limite: 30s).",
-        )
     except HTTPException:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
+    except subprocess.TimeoutExpired:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(
+            status_code=status.HTTP_408_REQUEST_TIMEOUT,
+            detail="Timeout ao clonar repositório.",
+        )
     except Exception as exc:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro interno durante a auditoria: {exc}",
-        ) from exc
+            detail=f"Erro interno durante auditoria: {exc}",
+        )
 
-    return {
-        "audit_id":             record["audit_id"],
-        "project":              record["project"],
-        "status":               record["status"],
-        "health_score_initial": record["health_score_initial"],
-        "health_score_final":   record["health_score_final"],
-        "total_findings":       record["total_findings"],
-        "by_severity":          record["by_severity"],
-        "fixed_count":          len(record["fixed"]),
-        "skipped_count":        len(record["skipped"]),
-        "languages_detected":   record["languages_detected"],
-        "files_scanned":        record["files_scanned"],
-        "findings":             record["findings"],
-    }
-
-
-# =============================================================================
-# ENDPOINTS — CONSULTA
-# =============================================================================
 
 @router.get(
     "/audit/{audit_id}",
-    summary="Resultado completo de uma auditoria salva",
+    summary="Retorna resultado completo de uma auditoria",
     status_code=status.HTTP_200_OK,
 )
 async def get_audit(audit_id: str):
-    record = _get_or_404(audit_id)
-    # Não expõe project_path internamente
-    return {k: v for k, v in record.items() if k != "project_path"}
+    return _get_or_404(audit_id)
 
 
 @router.get(
     "/audit/{audit_id}/report",
-    summary="Laudo formatado com score inicial vs final e diffs",
+    summary="Laudo JSON com score inicial vs final",
     status_code=status.HTTP_200_OK,
 )
 async def get_report(audit_id: str):
-    r = _get_or_404(audit_id)
-    score_delta = r["health_score_final"] - r["health_score_initial"]
+    record = _get_or_404(audit_id)
     return {
-        "audit_id":             r["audit_id"],
-        "project":              r["project"],
-        "date":                 r["date"],
-        "status":               r["status"],
-        # scores
-        "health_score_initial": r["health_score_initial"],
-        "health_score_final":   r["health_score_final"],
-        "score_improvement":    score_delta,
-        # findings
-        "total_findings":       r["total_findings"],
-        "by_severity":          r["by_severity"],
-        "findings":             r["findings"],
-        # correções
-        "fixed":                r["fixed"],
-        "skipped":              r["skipped"],
-        "patch_summary":        r["patch_summary"],
-        # metadados
-        "languages_detected":   r["languages_detected"],
-        "files_scanned":        r["files_scanned"],
+        "audit_id":             record["audit_id"],
+        "project":              record["project"],
+        "date":                 record["date"],
+        "health_score_initial": record["health_score_initial"],
+        "health_score_final":   record["health_score_final"],
+        "total_findings":       record["total_findings"],
+        "by_severity":          record["by_severity"],
+        "fixed":                record["fixed"],
+        "skipped":              record["skipped"],
     }
 
 
-# =============================================================================
-# ENDPOINTS — DOWNLOAD
-# =============================================================================
+@router.get(
+    "/audit/{audit_id}/report/security",
+    summary="Laudo de Segurança em HTML",
+    status_code=status.HTTP_200_OK,
+)
+async def get_report_security(audit_id: str):
+    record = _get_or_404(audit_id)
+    html = _reports.security_html(record)
+    return Response(content=html, media_type="text/html")
+
+
+@router.get(
+    "/audit/{audit_id}/report/performance",
+    summary="Laudo de Performance em HTML",
+    status_code=status.HTTP_200_OK,
+)
+async def get_report_performance(audit_id: str):
+    record = _get_or_404(audit_id)
+    html = _reports.performance_html(record)
+    return Response(content=html, media_type="text/html")
+
+
+@router.get(
+    "/audit/{audit_id}/report/certificate",
+    summary="Certificado de Qualidade em HTML",
+    status_code=status.HTTP_200_OK,
+)
+async def get_report_certificate(audit_id: str):
+    record = _get_or_404(audit_id)
+    html = _reports.certificate_html(record)
+    return Response(content=html, media_type="text/html")
+
 
 @router.get(
     "/audit/{audit_id}/download",
-    summary="Baixa o projeto corrigido como ZIP",
+    summary="Download do projeto corrigido como ZIP",
+    status_code=status.HTTP_200_OK,
 )
 async def download_fixed(audit_id: str, background_tasks: BackgroundTasks):
     record = _get_or_404(audit_id)
-
     project_path = record.get("project_path")
+
     if not project_path or not Path(project_path).exists():
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
-            detail="Projeto corrigido não está mais disponível. Reenvie o arquivo para uma nova auditoria.",
+            detail="Arquivos do projeto não estão mais disponíveis.",
         )
 
-    try:
-        buf = _zip_directory(Path(project_path))
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao compactar projeto: {exc}",
-        ) from exc
-
-    # Apaga project_path e remove referência do store após streaming
+    buf = _zip_directory(Path(project_path))
     background_tasks.add_task(shutil.rmtree, project_path, True)
-    record.pop("project_path", None)
 
-    filename = f"auditx_{audit_id[:8]}_fixed.zip"
+    filename = f"auditx_fixed_{audit_id[:8]}.zip"
     return StreamingResponse(
         buf,
         media_type="application/zip",
@@ -346,243 +358,34 @@ async def download_fixed(audit_id: str, background_tasks: BackgroundTasks):
     )
 
 
-# =============================================================================
-# ENDPOINTS — LAUDOS HTML
-# =============================================================================
-
-def _html_report(audit_id: str, kind: str) -> Response:
-    record = _get_or_404(audit_id)
-    gen = {"security": _reports.security,
-           "performance": _reports.performance,
-           "certificate": _reports.certificate}.get(kind)
-    if gen is None:
-        raise HTTPException(status_code=404,
-                            detail=f"Tipo de laudo '{kind}' inválido.")
-    html = gen(record)
-    return Response(content=html, media_type="text/html; charset=utf-8")
-
-
-@router.get("/audit/{audit_id}/report/security",
-            summary="Laudo HTML de Segurança (Blindagem)")
-async def report_security(audit_id: str):
-    return _html_report(audit_id, "security")
-
-
-@router.get("/audit/{audit_id}/report/performance",
-            summary="Laudo HTML de Performance (Eficiência)")
-async def report_performance(audit_id: str):
-    return _html_report(audit_id, "performance")
-
-
-@router.get("/audit/{audit_id}/report/certificate",
-            summary="Certificado HTML de Qualidade")
-async def report_certificate(audit_id: str):
-    return _html_report(audit_id, "certificate")
-
-
-# =============================================================================
-# ENDPOINTS — ENVIO POR EMAIL
-# =============================================================================
-
-@router.post("/audit/{audit_id}/send-report",
-             summary="Envia laudo por email (SMTP Hostinger)")
-async def send_report(audit_id: str, body: SendReportRequest):
+@router.post(
+    "/audit/{audit_id}/send-report",
+    summary="Envia laudo por email",
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("5/hour")
+async def send_report(request: Request, audit_id: str, body: SendReportRequest):
     record = _get_or_404(audit_id)
 
-    if body.report_type not in ("security", "performance", "certificate"):
+    valid_types = {"security", "performance", "certificate"}
+    if body.report_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="report_type deve ser: security | performance | certificate",
+            detail=f"report_type inválido. Use: {', '.join(valid_types)}",
         )
 
-    gen = {"security": _reports.security,
-           "performance": _reports.performance,
-           "certificate": _reports.certificate}[body.report_type]
-    html_report = gen(record)
-
-    # Monta bullets com resumo dos achados
-    n_crit = record.get("by_severity", {}).get("CRITICAL", 0)
-    n_high = record.get("by_severity", {}).get("HIGH", 0)
-    n_fixed = len(record.get("fixed", []))
-    bullets = (
-        f"• {record.get('total_findings', 0)} vulnerabilidade(s) detectada(s) "
-        f"({n_crit} crítica(s), {n_high} alta(s)).<br/>"
-        f"• {n_fixed} correção(ões) aplicada(s) automaticamente.<br/>"
-        f"• Score: {record.get('health_score_initial',0)} → "
-        f"{record.get('health_score_final',0)} "
-        f"(+{record.get('health_score_final',0) - record.get('health_score_initial',0)})."
-    )
-
     try:
-        svc = EmailService()
-        svc.send_report(
-            to_email=body.email,
-            audit_id=audit_id,
-            score_initial=record.get("health_score_initial", 0),
-            score_final=record.get("health_score_final", 0),
+        email_service = EmailService()
+        email_service.send_report(
+            to=body.email,
             report_type=body.report_type,
-            html_report=html_report,
-            project_name=record.get("project", "Projeto"),
-            findings_summary=bullets,
+            record=record,
+            reports=_reports,
         )
-        return {"sent": True, "to": body.email, "report_type": body.report_type}
-    except (ValueError, RuntimeError) as exc:
-        return {"sent": False, "error": str(exc)}
-
-
-# =============================================================================
-# PAYMENT — Mercado Pago
-# =============================================================================
-import hashlib
-import hmac as _hmac
-import json as _json
-
-from fastapi import Request
-
-from app.payment_service import PaymentService
-
-
-class PaymentRequest(BaseModel):
-    audit_id: str
-    plan:     str
-    email:    EmailStr
-
-
-@router.post(
-    "/payment/create",
-    summary="Cria preferência de pagamento MP e retorna init_point",
-    status_code=status.HTTP_200_OK,
-)
-async def payment_create(body: PaymentRequest):
-    try:
-        svc  = PaymentService()
-        data = svc.create_preference(
-            plan=body.plan,
-            audit_id=body.audit_id,
-            email=body.email,
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao enviar email: {exc}",
         )
-        return data
-    except (ValueError, RuntimeError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
 
-
-@router.post(
-    "/webhook/mercadopago",
-    summary="Webhook MP: processa pagamento aprovado",
-    status_code=status.HTTP_200_OK,
-)
-async def webhook_mercadopago(request: Request):
-    import os
-
-    body_bytes = await request.body()
-    secret     = os.getenv("MP_WEBHOOK_SECRET", "")
-
-    # Verifica assinatura HMAC quando secret estiver configurado
-    if secret:
-        sig_header = request.headers.get("x-signature", "")
-        req_id     = request.headers.get("x-request-id", "")
-        ts = v1 = ""
-        for part in sig_header.split(","):
-            if part.startswith("ts="):
-                ts = part[3:]
-            elif part.startswith("v1="):
-                v1 = part[3:]
-        try:
-            data_id = _json.loads(body_bytes).get("data", {}).get("id", "")
-        except Exception:
-            data_id = ""
-        template = f"id:{data_id};request-id:{req_id};ts:{ts};"
-        expected = _hmac.new(secret.encode(), template.encode(), hashlib.sha256).hexdigest()
-        if not _hmac.compare_digest(expected, v1):
-            raise HTTPException(status_code=401, detail="Assinatura inválida")
-
-    try:
-        payload = _json.loads(body_bytes)
-    except Exception:
-        return {"ok": True}
-
-    if payload.get("type") != "payment":
-        return {"ok": True}
-
-    payment_id = str(payload.get("data", {}).get("id", ""))
-    if not payment_id:
-        return {"ok": True}
-
-    try:
-        svc     = PaymentService()
-        payment = svc.get_payment(payment_id)
-    except Exception:
-        return {"ok": True}
-
-    if payment.get("status") != "approved":
-        return {"ok": True}
-
-    ext_ref = payment.get("external_reference", "")
-    parts   = ext_ref.split("|")
-    if len(parts) < 3:
-        return {"ok": True}
-
-    audit_id_ref, plan_ref, email_ref = parts[0], parts[1], parts[2]
-    valor = payment.get("transaction_amount", 0)
-    plan_label = "Laudo + Correção" if plan_ref == "correcao" else "Laudo Completo"
-
-    # Notifica suporte
-    try:
-        _email_svc = EmailService()
-        _email_svc.send_report(
-            to_email="suporte@api-plataforma.com",
-            audit_id=audit_id_ref,
-            score_initial=0,
-            score_final=0,
-            report_type="security",
-            html_report=(
-                f"<h2>💰 NOVO PAGAMENTO</h2>"
-                f"<p>Plano: {plan_label}<br/>"
-                f"Cliente: {email_ref}<br/>"
-                f"Valor: R${valor}<br/>"
-                f"Audit ID: {audit_id_ref}<br/>"
-                f"Payment ID: {payment_id}<br/>"
-                f"Laudo enviado automaticamente.</p>"
-            ),
-            project_name=f"💰 NOVO PAGAMENTO — {plan_label}",
-            findings_summary=(
-                f"• Plano: {plan_label}<br/>"
-                f"• Cliente: {email_ref}<br/>"
-                f"• Valor: R${valor}<br/>"
-                f"• Audit ID: {audit_id_ref}<br/>"
-                f"• Laudo enviado automaticamente."
-            ),
-        )
-    except Exception:
-        pass
-
-    # Envia laudo ao cliente se auditoria existir em memória
-    record = _store.get(audit_id_ref)
-    if record:
-        try:
-            html_report = _reports.security(record)
-            n_crit  = record.get("by_severity", {}).get("CRITICAL", 0)
-            n_high  = record.get("by_severity", {}).get("HIGH", 0)
-            n_fixed = len(record.get("fixed", []))
-            bullets = (
-                f"• {record.get('total_findings', 0)} vulnerabilidade(s) "
-                f"({n_crit} crítica(s), {n_high} alta(s)).<br/>"
-                f"• {n_fixed} correção(oes) aplicada(s).<br/>"
-                f"• Score: {record.get('health_score_initial',0)} → "
-                f"{record.get('health_score_final',0)}"
-            )
-            _email_svc = EmailService()
-            _email_svc.send_report(
-                to_email=email_ref,
-                audit_id=audit_id_ref,
-                score_initial=record.get("health_score_initial", 0),
-                score_final=record.get("health_score_final", 0),
-                report_type="security",
-                html_report=html_report,
-                project_name=record.get("project", "Projeto"),
-                findings_summary=bullets,
-            )
-        except Exception:
-            pass
-
-    return {"ok": True}
+    return {"message": f"Laudo enviado para {body.email} com sucesso."}

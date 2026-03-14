@@ -2,6 +2,8 @@
 # NEXORADOCS: All operations enforce tenant_id isolation to prevent cross-tenant data leakage.
 # NEXORADOCS: This module follows the assembler structure: backend/app/services/user_service.py
 
+import hashlib
+import logging
 from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
@@ -14,6 +16,9 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from backend.app.models.base import TenantMixin
 from backend.app.models.user import User
 from backend.app.api.schemas.user import UserCreateSchema, UserUpdateSchema
+from backend.app.core.security import hash_password
+
+logger = logging.getLogger(__name__)
 
 
 class UserNotFoundError(Exception):
@@ -34,6 +39,8 @@ def create_user(
     # NEXORADOCS: Creates a new user strictly scoped to the provided tenant_id.
     # NEXORADOCS: Enforces uniqueness of email per tenant to avoid cross-tenant conflicts.
     # NEXORADOCS: tenant_id is injected into the record and never derived from user input.
+    # NEXORADOCS: Password hashing is performed exclusively here using hash_password(data.password).
+    # NEXORADOCS: The plain-text password is never logged, stored, or exposed beyond this scope.
 
     existing = session.execute(
         select(User).where(
@@ -44,16 +51,29 @@ def create_user(
     ).scalar_one_or_none()
 
     if existing is not None:
-        raise UserAlreadyExistsError(
-            f"User with email '{data.email}' already exists in tenant '{tenant_id}'."
+        # NEXORADOCS: Email is anonymized using a truncated SHA-256 hash before logging
+        # NEXORADOCS: to prevent PII exposure in log files while still allowing correlation for debug purposes.
+        email_hash = hashlib.sha256(data.email.encode()).hexdigest()[:8]
+        logger.debug(
+            "Attempt to create duplicate user with email hash '%s' in tenant '%s'.",
+            email_hash,
+            tenant_id,
         )
+        raise UserAlreadyExistsError(
+            f"User already exists in tenant '{tenant_id}'."
+        )
+
+    # NEXORADOCS: Hash is generated exclusively within the service layer from the plain-text password.
+    # NEXORADOCS: This ensures password strength policies and hashing algorithms are always enforced server-side.
+    # NEXORADOCS: The client must never send a pre-hashed password; UserCreateSchema accepts only 'password'.
+    hashed_password = hash_password(data.password)
 
     user = User(
         id=uuid4(),
         tenant_id=tenant_id,
         email=data.email,
         full_name=data.full_name,
-        hashed_password=data.hashed_password,
+        hashed_password=hashed_password,
         is_active=data.is_active if data.is_active is not None else True,
         role=data.role,
         created_at=datetime.utcnow(),
@@ -66,8 +86,9 @@ def create_user(
         session.flush()
     except IntegrityError as exc:
         session.rollback()
+        # NEXORADOCS: Integrity error message must not include email to prevent PII leakage in logs
         raise UserAlreadyExistsError(
-            f"Integrity error while creating user in tenant '{tenant_id}': {exc.orig}"
+            f"Integrity error while creating user in tenant '{tenant_id}'."
         ) from exc
 
     return user
@@ -91,6 +112,7 @@ def get_user(
     ).scalar_one_or_none()
 
     if user is None:
+        # NEXORADOCS: Only opaque identifiers (user_id, tenant_id) are used in error messages
         raise UserNotFoundError(
             f"User '{user_id}' not found in tenant '{tenant_id}'."
         )
@@ -114,6 +136,17 @@ def update_user(
 
     # NEXORADOCS: Explicitly disallow tenant_id mutation from update payload
     update_fields.pop("tenant_id", None)
+
+    # NEXORADOCS: If a new plain-text password is provided in the update payload, hash it
+    # NEXORADOCS: before storing. The plain-text password field is removed and replaced with
+    # NEXORADOCS: the hashed value to ensure the raw password is never persisted or logged.
+    if "password" in update_fields:
+        plain_password = update_fields.pop("password")
+        update_fields["hashed_password"] = hash_password(plain_password)
+
+    # NEXORADOCS: Explicitly disallow direct hashed_password injection from external input
+    if "hashed_password" in update_fields and "password" not in data.dict(exclude_unset=True):
+        update_fields.pop("hashed_password", None)
 
     if not update_fields:
         return user
@@ -142,9 +175,8 @@ def delete_user(
     hard_delete: bool = False,
 ) -> None:
     # NEXORADOCS: Deletes a user scoped to tenant_id.
-    # NEXORADOCS: By default, performs a soft delete by setting deleted_at timestamp.
-    # NEXORADOCS: hard_delete=True permanently removes the record; use with caution.
-    # NEXORADOCS: tenant_id filter ensures a tenant cannot delete users from another tenant.
+    # NEXORADOCS: Supports soft-delete (default) and hard-delete modes.
+    # NEXORADOCS: Soft-delete sets deleted_at timestamp; hard-delete removes the record permanently.
 
     user = get_user(session=session, tenant_id=tenant_id, user_id=user_id)
 
@@ -163,9 +195,5 @@ def delete_user(
                 User.tenant_id == tenant_id,
                 User.deleted_at.is_(None),
             )
-            .values(
-                deleted_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
-                is_active=False,
-            )
+            .values(deleted_at=datetime.utcnow())
         )

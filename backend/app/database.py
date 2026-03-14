@@ -2,7 +2,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./auditx.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL não configurado. Defina a variável de ambiente DATABASE_URL antes de iniciar a aplicação.")
+
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production").lower()
+
+if ENVIRONMENT == "production" and DATABASE_URL.startswith("sqlite"):
+    raise RuntimeError("SQLite não é permitido em ambiente de produção. Configure um banco de dados adequado (PostgreSQL, MySQL, etc.) e defina DATABASE_URL corretamente.")
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
