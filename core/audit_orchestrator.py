@@ -176,8 +176,17 @@ class AuditOrchestrator:
         # 9. Aprende padrões (genoma de vulnerabilidades)
         self._learn(findings, fixed)
 
-        # 10. Notificação (log apenas — integrar com email_service externamente)
-        self._notify(context.get("email"), audit_id, security_score_final)
+        # 10. Notificação — EmailService
+        self._notify(
+            email=context.get("email"),
+            audit_id=audit_id,
+            score_initial=security_score_initial,
+            score_final=security_score_final,
+            findings=findings,
+            fixed=fixed,
+            ingest=ingest,
+            context=context,
+        )
 
         return {
             "audit_id":            audit_id,
@@ -622,12 +631,112 @@ Gere o resumo executivo em 2-3 linhas."""
             except Exception:
                 pass
 
-    def _notify(self, email: Optional[str], audit_id: str, score: int) -> None:
-        """Log da notificação — integrar com email_service via Celery."""
-        if email:
-            print(f"[NOTIFY] Laudo {audit_id} | score {score}/100 -> {email}")
-        else:
-            print(f"[NOTIFY] Laudo {audit_id} | score {score}/100 | sem email")
+    def _notify(
+        self,
+        email: Optional[str],
+        audit_id: str,
+        score_initial: int,
+        score_final: int,
+        findings: list,
+        fixed: list,
+        ingest: dict,
+        context: dict,
+    ) -> None:
+        """Envia laudo por email via EmailService (SMTP Hostinger)."""
+        if not email:
+            print(f"[NOTIFY] Laudo {audit_id} | score {score_final}/100 | sem email")
+            return
+
+        try:
+            import importlib.util as _ilu
+            _spec = _ilu.spec_from_file_location(
+                "email_service",
+                "/app/core/email_service.py",
+            )
+            _mod = _ilu.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            EmailService = _mod.EmailService
+
+            # Monta HTML do laudo inline (sem depender de ReportGenerator)
+            by_sev: dict = {}
+            for f in findings:
+                sev = f.get("severity", "LOW")
+                by_sev[sev] = by_sev.get(sev, 0) + 1
+
+            sev_rows = "".join(
+                f'<tr><td style="padding:4px 12px;font-weight:bold;color:{c}">{s}</td>'
+                f'<td style="padding:4px 12px;text-align:center">{by_sev.get(s, 0)}</td></tr>'
+                for s, c in [("CRITICAL","#dc2626"),("HIGH","#ea580c"),
+                              ("MEDIUM","#ca8a04"),("LOW","#2563eb")]
+            )
+            finding_rows = "".join(
+                f'<tr style="border-bottom:1px solid #e5e7eb">'
+                f'<td style="padding:6px 10px;font-weight:bold;color:#dc2626">{f.get("severity")}</td>'
+                f'<td style="padding:6px 10px">{f.get("title")}</td>'
+                f'<td style="padding:6px 10px;font-family:monospace;font-size:12px">'
+                f'{f.get("file","")}:{f.get("line","")}</td></tr>'
+                for f in findings[:20]
+            )
+            langs = ", ".join(ingest.get("languages", []))
+            project = context.get("filename", "Projeto")
+
+            html = f"""
+<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:680px;margin:auto;color:#1f2937">
+<div style="background:#1e3a5f;padding:24px;border-radius:8px 8px 0 0">
+  <h1 style="color:#fff;margin:0;font-size:22px">🛡️ AUDITX — Laudo de Segurança</h1>
+  <p style="color:#93c5fd;margin:6px 0 0">Auditoria #{audit_id[:8].upper()} · {project}</p>
+</div>
+<div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:0">
+  <table width="100%" style="border-collapse:collapse;margin-bottom:20px">
+    <tr>
+      <td style="padding:12px;background:#fef2f2;border-radius:6px;text-align:center">
+        <div style="font-size:36px;font-weight:900;color:#dc2626">{score_initial}</div>
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase">Score Inicial</div>
+      </td>
+      <td style="padding:12px;text-align:center;font-size:24px;color:#9ca3af">→</td>
+      <td style="padding:12px;background:#f0fdf4;border-radius:6px;text-align:center">
+        <div style="font-size:36px;font-weight:900;color:#16a34a">{score_final}</div>
+        <div style="font-size:11px;color:#6b7280;text-transform:uppercase">Score Final</div>
+      </td>
+    </tr>
+  </table>
+  <p style="color:#374151">
+    <strong>{len(findings)} vulnerabilidades</strong> encontradas em
+    <strong>{ingest.get("file_count", 0)} arquivos</strong>
+    ({langs}). <strong>{len(fixed)} corrigidas automaticamente.</strong>
+  </p>
+  <table width="100%" style="border-collapse:collapse;margin:16px 0">{sev_rows}</table>
+  <h3 style="color:#1e3a5f;border-bottom:2px solid #e5e7eb;padding-bottom:8px">Vulnerabilidades Encontradas</h3>
+  <table width="100%" style="border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f9fafb">
+      <th style="padding:8px 10px;text-align:left">Severidade</th>
+      <th style="padding:8px 10px;text-align:left">Descrição</th>
+      <th style="padding:8px 10px;text-align:left">Arquivo</th>
+    </tr></thead>
+    <tbody>{finding_rows}</tbody>
+  </table>
+  <div style="margin-top:24px;padding:16px;background:#f0fdf4;border-radius:6px;text-align:center">
+    <p style="color:#15803d;font-weight:bold;margin:0">
+      ✅ Auditoria concluída — score melhorou {score_final - score_initial} pontos
+    </p>
+  </div>
+</div>
+</body></html>"""
+
+            es = EmailService()
+            sent = es.send_report(
+                to_email=email,
+                audit_id=audit_id,
+                score_initial=score_initial,
+                score_final=score_final,
+                report_type="security",
+                html_report=html,
+                project_name=project,
+            )
+            print(f"[NOTIFY] Email enviado para {email}: {sent}")
+
+        except Exception as exc:
+            print(f"[NOTIFY] Erro ao enviar email para {email}: {exc}")
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 
