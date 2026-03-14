@@ -27,3 +27,9 @@ auditx_git_*/
 .nexora_shadow_attack.py
 Dockerfile.shadow
 Dockerfile.nexora
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/client/.vite/
