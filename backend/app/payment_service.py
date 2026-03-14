@@ -5,14 +5,29 @@ import mercadopago
 
 PLANS = {
     "laudo": {
-        "title": "AUDITX \u2014 Laudo Completo de Seguran\u00e7a",
-        "price": 1000.00,
+        "title": "AUDITX \u2014 Acesso \u00danico",
+        "price": 119.00,
         "description": "Laudo Blindagem + Efici\u00eancia + Certificado com QR Code",
     },
     "correcao": {
         "title": "AUDITX \u2014 Laudo + Corre\u00e7\u00e3o Autom\u00e1tica",
-        "price": 5000.00,
+        "price": 299.00,
         "description": "Laudo completo + Auto-Fix aplicado + Projeto corrigido",
+    },
+    "dev": {
+        "title": "AUDITX \u2014 Plano Dev (Mensal)",
+        "price": 99.00,
+        "description": "At\u00e9 5 auditorias/m\u00eas, 50MB, certificado com QR Code",
+    },
+    "pro": {
+        "title": "AUDITX \u2014 Plano Pro (Mensal)",
+        "price": 299.00,
+        "description": "At\u00e9 20 auditorias/m\u00eas, 200MB, Auto-Fix, Suporte email",
+    },
+    "scale": {
+        "title": "AUDITX \u2014 Plano Scale (Mensal)",
+        "price": 899.00,
+        "description": "Auditorias ilimitadas, 1GB, Auto-Fix ilimitado, CI/CD, Suporte 24/7",
     },
 }
 

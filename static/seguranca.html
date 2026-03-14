@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Saiba mais sobre as práticas de Segurança, Privacidade e Conformidade adotadas pelo AuditX."/>
+<title>Segurança e Privacidade — AUDITX</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --red:#ff453a;--green:#30d158;--yellow:#ffd60a;
+    --bg:#080808;--surface:#111;--border:rgba(255,255,255,.08);
+    --text:rgba(255,255,255,.85);--muted:rgba(255,255,255,.4)
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;overflow-x:hidden}
+
+  /* NAV */
+  nav{position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:18px 40px;background:rgba(8,8,8,.85);
+      backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+  .logo{font-size:20px;font-weight:900;letter-spacing:-1px;color:#fff;text-decoration:none}
+  .logo span{color:var(--red)}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;
+        transition:color .2s}
+  nav a:hover{color:#fff}
+  .nav-links{display:flex;gap:32px;align-items:center}
+  .nav-cta{background:var(--red);color:#fff!important;padding:10px 20px;
+           border-radius:8px;font-weight:700!important}
+
+  /* CONTENT */
+  .container{max-width:800px;margin:120px auto 80px;padding:0 24px;line-height:1.7}
+  
+  .hero-tag{display:inline-flex;align-items:center;gap:8px;
+            background:rgba(255,69,58,.1);border:1px solid rgba(255,69,58,.3);
+            color:var(--red);font-size:12px;font-weight:700;
+            letter-spacing:2px;text-transform:uppercase;
+            padding:8px 16px;border-radius:100px;margin-bottom:24px}
+            
+  h1{font-size:clamp(32px,5vw,56px);font-weight:900;line-height:1.1;
+     letter-spacing:-2px;margin-bottom:32px}
+     
+  .intro{font-size:20px;color:var(--muted);margin-bottom:48px;line-height:1.5}
+  
+  h2{font-size:28px;font-weight:800;letter-spacing:-1px;margin:48px 0 24px;
+     padding-bottom:12px;border-bottom:1px solid var(--border)}
+     
+  h3{font-size:20px;font-weight:700;margin:32px 0 16px;color:#fff}
+  
+  p{font-size:16px;margin-bottom:24px;color:rgba(255,255,255,.75)}
+  
+  ul{margin-bottom:32px;padding-left:0;list-style:none}
+  ul li{font-size:16px;color:rgba(255,255,255,.75);margin-bottom:12px;display:flex;align-items:flex-start;gap:12px}
+  ul li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+  
+  .doc-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px}
+  .doc-block strong{display:block;color:#fff;font-size:18px;margin-bottom:8px}
+  .doc-block p{margin-bottom:0;font-size:15px;color:var(--muted)}
+
+  .contact-box{background:linear-gradient(145deg,rgba(255,69,58,.06),#0d0d0d);
+               border:1px solid rgba(255,69,58,.2);border-radius:16px;padding:32px;
+               text-align:center;margin-top:64px}
+  .contact-box h3{margin-top:0}
+  .contact-box p{margin-bottom:24px}
+  .contact-email{display:inline-block;font-size:18px;font-weight:700;color:var(--red);
+                 background:rgba(255,69,58,.1);padding:12px 24px;border-radius:8px;
+                 text-decoration:none;transition:background .2s}
+  .contact-email:hover{background:rgba(255,69,58,.2)}
+
+  /* FOOTER */
+  footer{background:var(--surface);border-top:1px solid var(--border);
+         padding:48px 40px;text-align:center}
+  .footer-logo{font-size:24px;font-weight:900;letter-spacing:-1px;margin-bottom:8px}
+  .footer-logo span{color:var(--red)}
+  footer p{font-size:13px;color:var(--muted);line-height:1.8}
+  footer a{color:var(--muted);text-decoration:none}
+  footer a:hover{color:#fff}
+
+  @media(max-width:640px){
+    nav{padding:16px 20px}
+    .nav-links{display:none}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">AUDIT<span>X</span></a>
+  <div class="nav-links">
+    <a href="/#como-funciona">Como Funciona</a>
+    <a href="/#o-que-encontramos">O Que Auditamos</a>
+    <a href="/#planos">Planos</a>
+    <a href="/#demo" class="nav-cta">Testar Grátis</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="hero-tag">Conformidade e Transparência</div>
+  <h1>Segurança, Privacidade e Conformidade</h1>
+  
+  <p class="intro">
+    No AuditX, segurança e privacidade não são apenas recursos adicionais — são fundamentos da arquitetura da plataforma. Nossa tecnologia foi projetada para analisar, diagnosticar e otimizar repositórios de código com máxima proteção de dados, seguindo os princípios modernos de segurança.
+  </p>
+
+  <h2>Conformidade com LGPD e GDPR</h2>
+  <p>
+    Diferente do que muitos imaginam, não existe uma certificação obrigatória emitida pelo governo brasileiro ou pela Autoridade Nacional de Proteção de Dados (ANPD) que uma empresa precise comprar para estar em conformidade com a LGPD.
+  </p>
+  <p>
+    A conformidade com leis de privacidade não é um selo isolado, mas sim um processo contínuo baseado em boas práticas, governança e arquitetura segura. O AuditX foi desenvolvido seguindo princípios reconhecidos internacionalmente de proteção de dados, segurança da informação e processamento seguro de código.
+  </p>
+
+  <h2>Privacy by Design</h2>
+  <p>
+    A arquitetura do AuditX foi construída seguindo o conceito de Privacy by Design, onde a proteção de dados é integrada diretamente no funcionamento da plataforma. Isso significa que:
+  </p>
+  <ul>
+    <li>O processamento ocorre em ambientes isolados</li>
+    <li>O código é analisado em execuções temporárias e controladas</li>
+    <li>Não existe armazenamento permanente de repositórios enviados</li>
+    <li>O sistema opera com minimização de dados por padrão</li>
+  </ul>
+  <p>
+    Essa abordagem atende diretamente princípios presentes em regulamentações modernas como LGPD e GDPR, incluindo:
+  </p>
+  <ul>
+    <li>Minimização de dados</li>
+    <li>Limitação de armazenamento</li>
+    <li>Segurança por arquitetura</li>
+    <li>Processamento controlado</li>
+  </ul>
+
+  <h2>Governança e Documentação de Segurança</h2>
+  <p>
+    Para garantir transparência e boas práticas operacionais, a plataforma mantém estrutura baseada em documentação reconhecida em segurança da informação:
+  </p>
+  
+  <div class="doc-block">
+    <strong>ROPA — Record of Processing Activities</strong>
+    <p>Inventário técnico que documenta como os dados são processados dentro da plataforma.</p>
+  </div>
+  
+  <div class="doc-block">
+    <strong>DPIA — Data Protection Impact Assessment</strong>
+    <p>Avaliação de impacto aplicada em cenários que possam envolver dados sensíveis.</p>
+  </div>
+  
+  <div class="doc-block">
+    <strong>Política de Privacidade e Termos de Uso</strong>
+    <p>Documentos públicos que definem claramente as regras de utilização e proteção de dados.</p>
+  </div>
+
+  <h2>Padrões Internacionais de Segurança</h2>
+  <p>
+    Embora não sejam obrigatórias para operação, existem certificações amplamente utilizadas no mercado global de tecnologia que servem como referência de boas práticas. Entre elas:
+  </p>
+  <ul>
+    <li><strong>ISO/IEC 27701</strong> — Gestão de privacidade baseada na ISO 27001</li>
+    <li><strong>SOC 2 / ISAE 3402</strong> — Auditoria internacional de controles de segurança para empresas SaaS</li>
+  </ul>
+  <p>
+    A arquitetura do AuditX foi projetada para seguir os princípios técnicos dessas estruturas, permitindo evolução futura para certificações formais quando necessário.
+  </p>
+
+  <h2>Nosso Compromisso</h2>
+  <p>
+    O AuditX foi desenvolvido para que desenvolvedores, startups e empresas possam analisar e fortalecer seus códigos com segurança, rapidez e confiança. Nossa infraestrutura prioriza:
+  </p>
+  <ul>
+    <li>Isolamento de execução</li>
+    <li>Análise automatizada de segurança</li>
+    <li>Correção inteligente de vulnerabilidades</li>
+    <li>Proteção de dados durante todo o processo</li>
+  </ul>
+  <p>
+    Tudo isso mantendo o objetivo principal da plataforma: <strong>entregar código pronto para produção em poucos minutos.</strong>
+  </p>
+
+  <div class="contact-box">
+    <h3>Canal de Suporte e Privacidade</h3>
+    <p>Para qualquer dúvida relacionada à segurança da plataforma, privacidade ou proteção de dados, nossa equipe está disponível.</p>
+    <a href="mailto:suporte@api-plataforma.com" class="contact-email">📩 suporte@api-plataforma.com</a>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-logo">AUDIT<span>X</span></div>
+  <p>
+    Autopsia Digital do Seu Código<br/>
+    <a href="mailto:suporte@api-plataforma.com">suporte@api-plataforma.com</a>
+    &nbsp;·&nbsp;
+    <a href="https://auditor.nexora360.cloud">auditor.nexora360.cloud</a>
+    &nbsp;·&nbsp;
+    <a href="/seguranca.html">Segurança e Privacidade</a>
+  </p>
+</footer>
+
+</body>
+</html>

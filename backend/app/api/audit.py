@@ -163,6 +163,17 @@ async def audit_zip(file: UploadFile = File(...)):
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Arquivo ZIP inválido ou corrompido.",
             )
+        except RuntimeError as exc:
+            msg = str(exc).lower()
+            if "password" in msg or "encrypted" in msg:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este arquivo ZIP está protegido por senha. Envie um ZIP sem proteção.",
+                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Erro ao extrair ZIP: {exc}",
+            )
 
         record = _run_full_pipeline(tmp_dir, file.filename)
 
