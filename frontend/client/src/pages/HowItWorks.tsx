@@ -129,7 +129,7 @@ export default function HowItWorks() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white border border-border rounded-lg p-8 text-center">
-              <div className="text-4xl font-bold text-primary font-mono mb-2">&lt;60s</div>
+              <div className="text-4xl font-bold text-primary font-mono mb-2">&lt; 3 min</div>
               <p className="text-muted-foreground">Ingestão e Mapeamento</p>
             </div>
             <div className="bg-white border border-border rounded-lg p-8 text-center">

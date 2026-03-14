@@ -6,7 +6,7 @@ export default function DeliverablePreview() {
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-                        O que você recebe em menos de 60 segundos
+                        O que você recebe em minutos
                     </h2>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Não entregamos apenas uma lista de erros. Entregamos clareza, correções prontas e validação para o seu time.
@@ -24,7 +24,7 @@ export default function DeliverablePreview() {
                                     <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
                                     <div className="w-3 h-3 rounded-full bg-green-500/50"></div>
                                 </div>
-                                <div className="text-[10px] text-muted-foreground font-mono">dashboard.auditx.ai/report/v1042</div>
+                                <div className="text-[10px] text-muted-foreground font-mono">auditor.nexora360.cloud/report/v1042</div>
                             </div>
                             <img
                                 src="/dashboard_mockup.png"
@@ -93,7 +93,7 @@ export default function DeliverablePreview() {
                                 "Relatório em PDF",
                                 "JSON para CI/CD",
                                 "Certificado Digital",
-                                "Pull Requests Prontas"
+                                "Auto-PR (Em breve)"
                             ].map((item, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                     <CheckCircle2 className="w-4 h-4 text-safe" />

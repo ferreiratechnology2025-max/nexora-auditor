@@ -10,20 +10,20 @@ import { Github, Gitlab, HardDrive } from "lucide-react";
 export default function SocialProof() {
   const stats = [
     {
-      value: "1.240+",
-      label: "Vulnerabilidades detectadas hoje",
+      value: "94%+",
+      label: "Dos projetos têm pelo menos uma falha",
       highlight: true,
     },
     {
       value: "94%",
-      label: "Dos projetos têm falhas críticas",
+      label: "Dos projetos analisados têm falhas críticas",
     },
     {
       value: "+40",
       label: "Tipos de falhas detectados",
     },
     {
-      value: "<60s",
+      value: "< 3 min",
       label: "Tempo médio de auditoria",
     },
   ];

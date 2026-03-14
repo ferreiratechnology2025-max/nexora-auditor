@@ -158,7 +158,7 @@ export default function HeroSection({ onAnalyzeStart, isAnalyzing }: HeroSection
           <div className="bg-background/40 backdrop-blur-md border border-border px-4 py-1.5 rounded-full flex items-center gap-2 animate-pulse shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-safe"></span>
             <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-widest">
-              12 auditorias realizadas nos últimos 30 minutos
+              Auditoria em tempo real
             </span>
           </div>
         </div>
@@ -177,15 +177,12 @@ export default function HeroSection({ onAnalyzeStart, isAnalyzing }: HeroSection
             Plataforma DevSecOps Autônoma com Auditoria de Código por IA
           </h1>
 
-          <div className="mb-8 inline-block bg-primary text-white text-[10px] md:text-xs font-black px-4 py-1.5 rounded shadow-lg transform -rotate-1 animate-bounce">
-            OFERTA DE BOAS-VINDAS: SEU PRIMEIRO LAUDO CERTIFICADO COM 50% OFF (VÁLIDO POR 2H)
-          </div>
 
           <h2 className="text-base md:text-lg text-foreground font-black mb-8 max-w-4xl mx-auto uppercase tracking-tight">
             Não apenas escaneie. Conserte automaticamente.
           </h2>
           <p className="text-base md:text-xl text-muted-foreground max-w-3xl mx-auto font-medium leading-relaxed border-l-4 border-primary pl-6 py-2 text-left italic">
-            A primeira auditoria completa e autônoma para softwares de alto valor. Proteja seu ativo mais precioso. O AuditX submete seu código ao escrutínio de 9 IAs de elite, blindando sistemas críticos com correções automáticas definitivas e garantindo <strong>OWASP compliance</strong>.
+            A primeira auditoria completa e autônoma para softwares de alto valor. Proteja seu ativo mais precioso. O AuditX aplica análise estática avançada com IA, blindando sistemas críticos com correções automáticas definitivas e garantindo <strong>OWASP compliance</strong>.
           </p>
         </div>
 

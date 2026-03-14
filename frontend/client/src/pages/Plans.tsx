@@ -59,7 +59,7 @@ export default function Plans() {
             <div className="max-w-3xl mx-auto bg-card border-2 border-primary rounded-2xl p-8 shadow-xl md:flex md:items-center md:justify-between gap-8">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-primary mb-2">Acesso Único</p>
-                <h3 className="text-3xl font-bold text-foreground mb-2">Laudo certificado em até 60s</h3>
+                <h3 className="text-3xl font-bold text-foreground mb-2">Laudo certificado em minutos</h3>
                 <p className="text-muted-foreground">Ideal para uma única entrega ou POC. Mesmo rigor do Plano Pro, sem assinatura.</p>
               </div>
               <div className="text-center md:text-right">

@@ -21,7 +21,7 @@ export default function FAQSection() {
         },
         {
             question: "Posso integrar ao meu pipeline de CI/CD?",
-            answer: "Com certeza. O AUDITX oferece APIs e webhooks robustos, permitindo que você bloqueie Pull Requests que não atinjam seu score de segurança mínimo configurado."
+            answer: "Com certeza. O AUDITX oferece APIs e webhooks robustos, permitindo que você bloqueie merges que não atinjam seu score de segurança mínimo configurado."
         }
     ];
 

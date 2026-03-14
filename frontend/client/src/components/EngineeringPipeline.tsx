@@ -3,7 +3,7 @@ import { Cpu, Share2, MessageSquare, ShieldCheck } from "lucide-react";
 /**
  * AuditX Engineering Pipeline
  * Design: Minimalismo Cirúrgico
- * - Explicação visual do Consenso de 9 IAs
+ * - Explicação visual do pipeline de análise com IA
  */
 
 const steps = [
@@ -14,17 +14,17 @@ const steps = [
     },
     {
         title: "Conselho de Inteligência",
-        description: "Submetemos os pontos críticos a 9 modelos de linguagem de larga escala (LLMs) diferentes simultaneamente.",
+        description: "Aplicamos análise profunda com múltiplas camadas de detecção.",
         icon: <Cpu className="w-6 h-6" />,
     },
     {
-        title: "Debate de Falsos Positivos",
-        description: "Nosso algoritmo ignora alertas que não possuem consenso majoritário, eliminando ruídos e alertas inúteis.",
+        title: "Validação Cruzada",
+        description: "Validação cruzada elimina falsos positivos com regras contextuais.",
         icon: <MessageSquare className="w-6 h-6" />,
     },
     {
         title: "Engenharia de Refatoração",
-        description: "A IA vencedora gera o patch de correção, validado por uma segunda camada de segurança antes da entrega.",
+        description: "Motor de correção gera o patch validado por análise de sintaxe.",
         icon: <ShieldCheck className="w-6 h-6" />,
     },
 ];
@@ -38,7 +38,7 @@ export default function EngineeringPipeline() {
                         O Cérebro AuditX
                     </h2>
                     <p className="text-muted-foreground text-lg max-w-2xl mx-auto uppercase tracking-widest text-xs font-bold">
-                        Como o Consenso de 9 IAs funciona
+                        Como o pipeline de análise com IA funciona
                     </p>
                 </div>
 

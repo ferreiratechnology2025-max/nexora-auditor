@@ -1,21 +1,20 @@
-import { Quote, Star, ArrowRight } from "lucide-react";
-import { Link } from "wouter";
+import { Quote, Star } from "lucide-react";
 
 export default function TestimonialSection() {
     const reviews = [
         {
-            name: "Ricardo Mendes",
-            role: "CTO @ TechStream",
+            name: "Dev Anônimo",
+            role: "Desenvolvedor Full Stack",
             image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200",
-            quote: "O AUDITX reduziu nosso tempo de revisão de segurança de dias para segundos. O diagnóstico é assustadoramente preciso, e os patches sugeridos pela IA economizam horas de refatoração.",
-            caseLink: "/depoimentos?case=techstream-auditx"
+            quote: "Encontrou 3 vulnerabilidades críticas no meu projeto em menos de 2 minutos. Vale cada centavo.",
+            caseLink: null
         },
         {
-            name: "Ana Silveira",
-            role: "Head of Security @ FintechOne",
+            name: "Startup em Lançamento",
+            role: "Fundador",
             image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200&h=200",
-            quote: "Pela primeira vez temos uma ferramenta que não só aponta o erro, mas entrega a solução pronta para o deploy. É a peça que faltava no nosso pipeline DevSecOps.",
-            caseLink: "/depoimentos?case=fintechone-devsecops"
+            quote: "Usamos antes de enviar o projeto para o cliente. O certificado com QR Code passou credibilidade imediata.",
+            caseLink: null
         }
     ];
 
@@ -60,9 +59,6 @@ export default function TestimonialSection() {
                                         <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{review.role}</span>
                                     </div>
                                 </div>
-                                <Link href={review.caseLink} className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1 hover:gap-2 transition-all">
-                                    Ler Estudo de Caso <ArrowRight className="w-3 h-3" />
-                                </Link>
                             </div>
                         </div>
                     ))}

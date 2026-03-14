@@ -37,7 +37,7 @@ const currentSubscription: SubscriptionInfo = {
     "Limite de 200MB por upload",
     "10 Auto-Fixes automáticos",
     "Certificado + Relatório Técnico",
-    "Análise de Dependências",
+    "Análise de Dependências (Em breve)",
     "Suporte por email",
   ],
 };

@@ -12,7 +12,7 @@ const features = [
         name: "Velocidade",
         manual: "7 a 15 dias úteis",
         traditional: "5 a 10 minutos",
-        auditx: "Sub 60 segundos",
+        auditx: "Resultado em minutos",
         highlight: true,
     },
     {
@@ -26,7 +26,7 @@ const features = [
         name: "Precisão",
         manual: "Alta (Sujeita a erro)",
         traditional: "Baixa (Falsos Positivos)",
-        auditx: "Extrema (9-IA Consensus)",
+        auditx: "Extrema (IA + AST)",
         highlight: true,
     },
     {
@@ -75,7 +75,7 @@ export default function ComparisonTable() {
                                     <th className="p-6 text-sm font-black uppercase tracking-widest text-primary border-b border-border bg-primary/5">
                                         <div className="flex items-center gap-2">
                                             <Zap className="w-4 h-4 fill-primary" />
-                                            AuditX (9-IA Consensus)
+                                            AuditX (IA + AST)
                                         </div>
                                     </th>
                                 </tr>

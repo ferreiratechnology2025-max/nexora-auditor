@@ -11,7 +11,7 @@ export default function ValidationLoading({ onComplete }: ValidationLoadingProps
 
     const steps = [
         { label: "[DEBUG] Construindo Árvore de Sintaxe Abstrata (AST)...", icon: Lock, color: "text-blue-500" },
-        { label: "[AI] Consultando Consenso de 9 IAs...", icon: Database, color: "text-indigo-500" },
+        { label: "[AI] Consultando motor de análise estática...", icon: Database, color: "text-indigo-500" },
         { label: "[SECURITY] Verificando vulnerabilidades OWASP Top 10...", icon: Search, color: "text-amber-500" },
         { label: "[TRACE] Procurando segredos hardcoded...", icon: ShieldAlert, color: "text-red-500" },
         { label: "[RASP] Avaliando rotas críticas em runtime...", icon: Shield, color: "text-primary" },
@@ -139,7 +139,7 @@ export default function ValidationLoading({ onComplete }: ValidationLoadingProps
                     {step >= 5 && (
                         <div className="flex items-center gap-2">
                             <span className="text-safe">[OK]</span>
-                            <span className="text-gray-400">Correlacionando consenso das 9 IAs... concluído</span>
+                            <span className="text-gray-400">Correlacionando resultados da análise estática... concluído</span>
                         </div>
                     )}
 
@@ -152,7 +152,7 @@ export default function ValidationLoading({ onComplete }: ValidationLoadingProps
                     <div className="pt-2 text-[8px] text-primary/30 truncate font-mono">
                         {[
                             "[DEBUG] Construindo Árvore de Sintaxe Abstrata (AST)...",
-                            "[AI] Consultando Consenso de 9 IAs...",
+                            "[AI] Consultando motor de análise estática...",
                             "[SECURITY] Verificando vulnerabilidades OWASP Top 10...",
                             "[TRACE] Normalizando tokens...",
                         ].map((line, i) => (
