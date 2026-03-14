@@ -1,5 +1,6 @@
-from fastapi import FastAPI, WebSocket, UploadFile, File, HTTPException
+from fastapi import FastAPI, WebSocket, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 import sys, os, tempfile, zipfile, uuid, json, subprocess
 
 sys.path.insert(0, '/app')
@@ -21,6 +22,130 @@ app.add_middleware(
 advisor = AIAdvisor()
 orchestrator = AuditOrchestrator()
 
+_REPORTS_DIR = '/tmp/auditx/reports'
+
+
+def _save_result(audit_id: str, result: dict) -> None:
+    """Persiste o resultado da auditoria para o endpoint de laudo."""
+    try:
+        os.makedirs(_REPORTS_DIR, exist_ok=True)
+        with open(f'{_REPORTS_DIR}/{audit_id}.json', 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False)
+    except Exception as e:
+        print(f'[SAVE] Erro ao salvar resultado {audit_id}: {e}')
+
+
+def _render_report_html(data: dict) -> str:
+    """Gera o HTML público do laudo a partir do resultado da auditoria."""
+    audit_id      = data.get('audit_id', '')
+    score_initial = data.get('score_initial', 0)
+    score_final   = data.get('score_final', 0)
+    total         = data.get('total_findings', 0)
+    findings      = data.get('findings', []) or []
+    fixed_count   = data.get('fixed_count', 0)
+    ingest        = data.get('ingest', {}) or {}
+    cert          = data.get('certificate', {}) or {}
+    langs         = ', '.join(ingest.get('languages', []))
+
+    sev_colors = {
+        'CRITICAL': ('#fef2f2', '#ef4444', '#fecaca', '#dc2626'),
+        'HIGH':     ('#fff7ed', '#f97316', '#fed7aa', '#ea580c'),
+        'MEDIUM':   ('#fffbeb', '#eab308', '#fef08a', '#ca8a04'),
+        'LOW':      ('#f0fdf4', '#22c55e', '#bbf7d0', '#16a34a'),
+    }
+
+    finding_rows = ''
+    for f in findings:
+        sev = f.get('severity', 'LOW')
+        bg, border, badge_bg, badge_fg = sev_colors.get(sev, sev_colors['LOW'])
+        title = f.get('title', f.get('category', '').replace('_', ' ').title())
+        desc  = f.get('description') or f.get('explanation', '')
+        loc   = f.get('file', '')
+        if f.get('line'):
+            loc += f':{f["line"]}'
+        finding_rows += f'''
+        <div style="background:{bg};border-left:4px solid {border};border-radius:8px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-weight:700;font-size:14px">{title}</span>
+            <span style="background:{badge_bg};color:{badge_fg};font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px">{sev}</span>
+          </div>
+          <div style="font-family:monospace;font-size:12px;color:#64748b">{loc}</div>
+          <div style="font-size:13px;color:#475569;margin-top:6px">{desc}</div>
+        </div>'''
+
+    cert_block = ''
+    if cert.get('number'):
+        verify_url = f"https://auditor.nexora360.cloud/verify/{cert.get('hash_short', cert.get('hash', ''))}"
+        cert_block = f'''
+        <div style="background:#1d4ed8;color:white;border-radius:16px;padding:24px;text-align:center;margin-top:24px">
+          <div style="font-size:20px;font-weight:900;letter-spacing:2px;margin-bottom:6px">{cert["number"]}</div>
+          <div style="font-size:13px;opacity:0.8">Certificado de Segurança Digital · AUDITX</div>
+          <a href="{verify_url}" style="display:inline-block;margin-top:14px;background:white;color:#1d4ed8;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none">
+            Verificar Autenticidade
+          </a>
+        </div>'''
+
+    improvement = score_final - score_initial
+    imp_color = '#16a34a' if improvement > 0 else '#64748b'
+
+    return f'''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laudo AUDITX — {audit_id[:8].upper()}</title>
+</head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;color:#1e293b">
+
+<div style="background:#1d4ed8;padding:32px;text-align:center">
+  <div style="font-size:28px;font-weight:900;letter-spacing:3px;color:white;margin-bottom:6px">🛡️ AUDITX</div>
+  <div style="color:#93c5fd;font-size:14px">Laudo de Segurança Digital — {audit_id[:8].upper()}</div>
+</div>
+
+<div style="max-width:800px;margin:32px auto;padding:0 16px">
+
+  <div style="background:white;border-radius:16px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px;display:flex;gap:24px;align-items:center;justify-content:space-around;flex-wrap:wrap">
+    <div style="text-align:center">
+      <div style="font-size:56px;font-weight:900;color:#ef4444;line-height:1">{score_initial}</div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:1px">Score Inicial</div>
+    </div>
+    <div style="font-size:32px;color:#94a3b8">→</div>
+    <div style="text-align:center">
+      <div style="font-size:56px;font-weight:900;color:#22c55e;line-height:1">{score_final}</div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:1px">Score Final</div>
+    </div>
+    <div style="text-align:center">
+      <div style="background:#dcfce7;color:{imp_color};font-size:24px;font-weight:900;padding:8px 20px;border-radius:10px">+{improvement} pts</div>
+      <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:1px">Melhoria</div>
+    </div>
+  </div>
+
+  <div style="background:white;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px">
+    <p style="color:#374151;margin:0">
+      <strong>{total} vulnerabilidades</strong> encontradas em
+      <strong>{ingest.get("file_count", 0)} arquivos</strong>
+      {f"({langs})" if langs else ""}
+      · <strong>{fixed_count} corrigidas automaticamente</strong>
+    </p>
+  </div>
+
+  <div style="background:white;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px">
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:16px">🔍 Vulnerabilidades ({total})</h2>
+    {finding_rows if finding_rows else '<p style="color:#64748b">Nenhuma vulnerabilidade encontrada.</p>'}
+  </div>
+
+  {cert_block}
+
+</div>
+
+<div style="text-align:center;padding:32px;color:#94a3b8;font-size:12px">
+  AUDITX — auditor.nexora360.cloud<br>
+  Laudo ID: {audit_id} · Gerado pelo motor Nexora v2.0
+</div>
+
+</body>
+</html>'''
+
 
 @app.get('/health')
 @app.get('/api/v2/health')
@@ -29,7 +154,7 @@ def health():
 
 
 @app.post('/api/v2/audit/zip')
-async def audit_zip(file: UploadFile = File(...), email: str = ''):
+async def audit_zip(file: UploadFile = File(...), email: str = Form('')):
     audit_id = str(uuid.uuid4())
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -58,22 +183,23 @@ async def audit_zip(file: UploadFile = File(...), email: str = ''):
             },
         )
 
+    _save_result(audit_id, result)
     return result
 
 
 @app.post('/api/v2/audit/github')
 async def audit_github(payload: dict):
     repo_url = payload.get('repo_url', '')
-    email = payload.get('email', '')
+    email    = payload.get('email', '')
     audit_id = str(uuid.uuid4())
 
     with tempfile.TemporaryDirectory() as tmp:
-        result = subprocess.run(
+        proc = subprocess.run(
             ['git', 'clone', '--depth', '1', repo_url, tmp + '/repo'],
             capture_output=True,
             timeout=60,
         )
-        if result.returncode != 0:
+        if proc.returncode != 0:
             raise HTTPException(400, 'Erro ao clonar repositório.')
 
         audit_result = orchestrator.run_audit(
@@ -86,7 +212,19 @@ async def audit_github(payload: dict):
             },
         )
 
+    _save_result(audit_id, audit_result)
     return audit_result
+
+
+@app.get('/api/v2/audit/{audit_id}/report', response_class=HTMLResponse)
+async def get_report(audit_id: str):
+    """Laudo HTML público — acessível pelo link do email."""
+    report_path = f'{_REPORTS_DIR}/{audit_id}.json'
+    if not os.path.exists(report_path):
+        raise HTTPException(404, f'Laudo {audit_id} não encontrado ou expirado.')
+    with open(report_path, encoding='utf-8') as f:
+        data = json.load(f)
+    return HTMLResponse(content=_render_report_html(data))
 
 
 @app.websocket('/ws/advisor/{session_id}')
@@ -116,16 +254,14 @@ def verify_certificate(report_hash: str):
     cert_path = f'/opt/nexora-auditor-engine/certificates/{report_hash}.json'
     if not os.path.exists(cert_path):
         raise HTTPException(404, 'Certificado não encontrado.')
-
     with open(cert_path) as f:
         cert = json.load(f)
-
     return {
-        'valid': True,
+        'valid':              True,
         'certificate_number': cert.get('number'),
-        'project': cert.get('project_name'),
-        'score_initial': cert.get('score_initial'),
-        'score_final': cert.get('score_final'),
-        'date': cert.get('date'),
-        'audited_by': 'Nexora Auditor v2.0',
+        'project':            cert.get('project_name'),
+        'score_initial':      cert.get('score_initial'),
+        'score_final':        cert.get('score_final'),
+        'date':               cert.get('date'),
+        'audited_by':         'Nexora Auditor v2.0',
     }
