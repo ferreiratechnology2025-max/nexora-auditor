@@ -1,8 +1,21 @@
 {
   "roles": {
-    "planner": "anthropic/claude-3.5-sonnet",
-    "executor": "openai/gpt-4o-mini",
-    "tester": "openai/gpt-4o-mini"
+    "planner":     "anthropic/claude-3.5-sonnet",
+    "executor":    "openai/gpt-4o-mini",
+    "tester":      "openai/gpt-4o-mini",
+    "advisor":     "anthropic/claude-sonnet-4-6",
+    "auditor":     "anthropic/claude-sonnet-4-6",
+    "autofix":     "anthropic/claude-sonnet-4-6",
+    "shadow":      "local",
+    "docs":        "anthropic/claude-haiku-4-5-20251001",
+    "certificate": "anthropic/claude-haiku-4-5-20251001"
   },
-  "provider": "openrouter"
+  "provider": "openrouter",
+  "notes": {
+    "shadow": "Executado localmente via ShadowTester + DockerSandbox, sem LLM.",
+    "advisor": "IA conversacional pre-auditoria — coleta contexto do cliente.",
+    "auditor": "Analisa o codigo do cliente e retorna findings estruturados.",
+    "autofix": "Gera correcoes para cada finding e valida com AST.",
+    "certificate": "Gera resumo executivo do certificado — modelo leve suficiente."
+  }
 }
