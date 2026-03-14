@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-import sys, os, tempfile, zipfile, uuid, json, subprocess, io, base64
+import sys, os, tempfile, zipfile, uuid, json, subprocess, io, base64, asyncio
 
 sys.path.insert(0, '/app')
 from dotenv import load_dotenv
@@ -22,8 +22,11 @@ app.add_middleware(
 advisor = AIAdvisor()
 orchestrator = AuditOrchestrator()
 
-_REPORTS_DIR = '/tmp/auditx/reports'
-_BASE_URL     = 'https://auditor.nexora360.cloud'
+_REPORTS_DIR   = '/tmp/auditx/reports'
+_BASE_URL       = 'https://auditor.nexora360.cloud'
+_SCAN_SEM       = asyncio.Semaphore(2)   # máx 2 scans simultâneos
+_SCAN_QUEUED    = 0                       # aguardando semáforo
+_SCAN_MAX_QUEUE = 5                       # rejeita acima disto
 
 
 def _qr_base64(url: str) -> str:
@@ -182,38 +185,69 @@ def health():
     return {'status': 'ok', 'motor': 'nexora-auditor-engine', 'version': '2.0'}
 
 
+@app.get('/api/v2/queue')
+async def queue_status():
+    """Status da fila de processamento."""
+    return {
+        'queued':         _SCAN_QUEUED,
+        'running':        2 - _SCAN_SEM._value,
+        'max_concurrent': 2,
+        'max_queue':      _SCAN_MAX_QUEUE,
+        'accepting':      _SCAN_QUEUED < _SCAN_MAX_QUEUE,
+    }
+
+
 @app.post('/api/v2/audit/zip')
 async def audit_zip(file: UploadFile = File(...), email: str = Form('')):
-    audit_id = str(uuid.uuid4())
+    global _SCAN_QUEUED
 
-    with tempfile.TemporaryDirectory() as tmp:
-        zip_path = os.path.join(tmp, 'project.zip')
-        with open(zip_path, 'wb') as f:
-            f.write(await file.read())
+    if _SCAN_QUEUED >= _SCAN_MAX_QUEUE:
+        raise HTTPException(503, 'Sistema ocupado. Tente novamente em alguns minutos.')
 
-        extract_path = os.path.join(tmp, 'project')
-        os.makedirs(extract_path)
+    # Lê o arquivo antes de entrar na fila (libera socket do cliente)
+    file_bytes = await file.read()
+    filename   = file.filename
+    audit_id   = str(uuid.uuid4())
 
-        try:
-            with zipfile.ZipFile(zip_path, 'r') as z:
-                z.extractall(extract_path)
-        except RuntimeError as e:
-            if 'password' in str(e).lower():
-                raise HTTPException(400, 'ZIP protegido por senha.')
-            raise HTTPException(400, f'ZIP inválido: {e}')
+    _SCAN_QUEUED += 1
+    try:
+        async with _SCAN_SEM:
+            _SCAN_QUEUED -= 1
+            print(f'[QUEUE] Iniciando scan {audit_id[:8]} | queued={_SCAN_QUEUED} running={2 - _SCAN_SEM._value}')
 
-        result = orchestrator.run_audit(
-            project_path=extract_path,
-            context={
-                'email': email,
-                'audit_id': audit_id,
-                'source': 'zip',
-                'filename': file.filename,
-            },
-        )
+            with tempfile.TemporaryDirectory() as tmp:
+                zip_path = os.path.join(tmp, 'project.zip')
+                with open(zip_path, 'wb') as f:
+                    f.write(file_bytes)
 
-    _save_result(audit_id, result)
-    return result
+                extract_path = os.path.join(tmp, 'project')
+                os.makedirs(extract_path)
+
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as z:
+                        z.extractall(extract_path)
+                except RuntimeError as e:
+                    if 'password' in str(e).lower():
+                        raise HTTPException(400, 'ZIP protegido por senha.')
+                    raise HTTPException(400, f'ZIP inválido: {e}')
+
+                result = orchestrator.run_audit(
+                    project_path=extract_path,
+                    context={
+                        'email':    email,
+                        'audit_id': audit_id,
+                        'source':   'zip',
+                        'filename': filename,
+                    },
+                )
+
+            _save_result(audit_id, result)
+            return result
+    except HTTPException:
+        raise
+    except Exception:
+        _SCAN_QUEUED = max(0, _SCAN_QUEUED - 1)
+        raise
 
 
 @app.post('/api/v2/audit/github')
