@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y git gcc && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt* ./
 RUN pip install --no-cache-dir fastapi uvicorn python-dotenv openai httpx \
     sqlalchemy psycopg2-binary celery redis python-jose "passlib[bcrypt]" \
-    mercadopago qrcode[pil] websockets python-multipart gitpython \
+    mercadopago "qrcode[pil]" pillow websockets python-multipart gitpython \
     2>/dev/null || true
 COPY . .
 RUN mkdir -p /opt/nexora-auditor-engine/certificates /tmp/auditx/reports

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-import sys, os, tempfile, zipfile, uuid, json, subprocess
+import sys, os, tempfile, zipfile, uuid, json, subprocess, io, base64
 
 sys.path.insert(0, '/app')
 from dotenv import load_dotenv
@@ -23,6 +23,23 @@ advisor = AIAdvisor()
 orchestrator = AuditOrchestrator()
 
 _REPORTS_DIR = '/tmp/auditx/reports'
+_BASE_URL     = 'https://auditor.nexora360.cloud'
+
+
+def _qr_base64(url: str) -> str:
+    """Gera QR Code PNG como string base64 para embed no HTML."""
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=1, box_size=5, border=2)
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='#1d4ed8', back_color='white')
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception as e:
+        print(f'[QR] Erro ao gerar QR Code: {e}')
+        return ''
 
 
 def _save_result(audit_id: str, result: dict) -> None:
@@ -75,12 +92,24 @@ def _render_report_html(data: dict) -> str:
 
     cert_block = ''
     if cert.get('number'):
-        verify_url = f"https://auditor.nexora360.cloud/verify/{cert.get('hash_short', cert.get('hash', ''))}"
+        cert_hash  = cert.get('hash_short') or cert.get('hash', audit_id)
+        verify_url = f"{_BASE_URL}/verify/{cert_hash}"
+        qr_b64     = _qr_base64(verify_url)
+        qr_img_tag = (
+            f'<img src="data:image/png;base64,{qr_b64}" '
+            f'style="width:120px;height:120px;display:block;margin:12px auto;border-radius:8px" '
+            f'alt="QR Code de verificação">'
+        ) if qr_b64 else ''
         cert_block = f'''
         <div style="background:#1d4ed8;color:white;border-radius:16px;padding:24px;text-align:center;margin-top:24px">
-          <div style="font-size:20px;font-weight:900;letter-spacing:2px;margin-bottom:6px">{cert["number"]}</div>
-          <div style="font-size:13px;opacity:0.8">Certificado de Segurança Digital · AUDITX</div>
-          <a href="{verify_url}" style="display:inline-block;margin-top:14px;background:white;color:#1d4ed8;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none">
+          <div style="font-size:20px;font-weight:900;letter-spacing:2px;margin-bottom:4px">{cert["number"]}</div>
+          <div style="font-size:13px;opacity:0.8;margin-bottom:4px">Certificado de Segurança Digital · AUDITX</div>
+          {qr_img_tag}
+          <div style="font-size:11px;opacity:0.6;margin-bottom:12px;font-family:monospace">
+            {verify_url}
+          </div>
+          <a href="{verify_url}" target="_blank"
+             style="display:inline-block;background:white;color:#1d4ed8;padding:10px 24px;border-radius:8px;font-weight:700;text-decoration:none">
             Verificar Autenticidade
           </a>
         </div>'''
